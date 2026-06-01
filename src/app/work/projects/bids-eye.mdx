@@ -85,6 +85,65 @@ link: "https://github.com/paul188"
 
 BIDS-Eye is a natural-language search engine over **OpenNeuro**, the primary open-access repository for human neuroimaging data (MRI, fMRI, EEG, MEG, PET). It answers queries like *"datasets with ≥ 50 left-handed participants who did an n-back task with fMRI"* by crawling ~1,000 datasets from AWS S3, indexing them into a unified PostgreSQL database, and translating free-text queries into SQL through a three-tier RAG pipeline backed by a 1,466-concept biomedical ontology.
 
+<style>{`
+  .be-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--neutral-border-weak);
+    border: 1px solid var(--neutral-border-weak);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  @media (max-width: 640px) {
+    .be-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  .be-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    background: var(--neutral-background-weak);
+    gap: 4px;
+    text-align: center;
+  }
+  .be-stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--neutral-on-background-strong);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .be-stat-label {
+    font-size: 11px;
+    color: var(--neutral-on-background-weak);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+`}</style>
+
+<div className="be-stats">
+  <div className="be-stat">
+    <span className="be-stat-num">1,722</span>
+    <span className="be-stat-label">Datasets</span>
+  </div>
+  <div className="be-stat">
+    <span className="be-stat-num">2.7M</span>
+    <span className="be-stat-label">Objects</span>
+  </div>
+  <div className="be-stat">
+    <span className="be-stat-num">75,728</span>
+    <span className="be-stat-label">Participants</span>
+  </div>
+  <div className="be-stat">
+    <span className="be-stat-num">1,466</span>
+    <span className="be-stat-label">Ontology concepts</span>
+  </div>
+</div>
+
 ---
 
 ## 1. OpenNeuro and the BIDS Standard

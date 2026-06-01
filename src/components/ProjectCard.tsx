@@ -6,9 +6,37 @@ import {
   Column,
   Flex,
   Heading,
+  Row,
   SmartLink,
+  Tag,
   Text,
 } from "@once-ui-system/core";
+
+type ColorScheme = "neutral" | "brand" | "accent" | "info" | "danger" | "warning" | "success";
+
+const TAG_COLORS: Record<string, ColorScheme> = {
+  // Languages & algorithms
+  "C/C++":                          "accent",
+  "algorithmic":                    "accent",
+  "scientific computing":           "info",
+  // AI / data
+  "LLM":                            "brand",
+  "RAG":                            "brand",
+  "semistructured data":            "info",
+  // Security
+  "Cybersecurity":                  "danger",
+  "Encryption":                     "danger",
+  "Defensive Cybersecurity":        "danger",
+  "Vulnerability Assessment":       "warning",
+  // Platform / infrastructure
+  "Cloud Platform for medical data":"warning",
+  // Research
+  "Research":                       "success",
+};
+
+function tagColor(label: string): ColorScheme {
+  return TAG_COLORS[label] ?? "neutral";
+}
 
 interface ProjectCardProps {
   href: string;
@@ -19,6 +47,7 @@ interface ProjectCardProps {
   description: string;
   avatars: { src: string }[];
   link: string;
+  tags?: string[];
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -29,6 +58,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   description,
   avatars,
   link,
+  tags = [],
 }) => {
   return (
     <Column fillWidth gap="m">
@@ -61,6 +91,13 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
               <Text wrap="balance" variant="body-default-s" onBackground="neutral-weak">
                 {description}
               </Text>
+            )}
+            {tags.length > 0 && (
+              <Row gap="8" wrap>
+                {tags.map((label) => (
+                  <Tag key={label} variant={tagColor(label)} size="s" label={label} />
+                ))}
+              </Row>
             )}
             <Flex gap="24" wrap>
               {content?.trim() && (

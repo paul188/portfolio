@@ -32,6 +32,11 @@ const TAG_COLORS: Record<string, ColorScheme> = {
   "Cloud Platform for medical data":"warning",
   // Research
   "Research":                       "success",
+  // ML / CV
+  "Machine Learning":               "brand",
+  "Computer Vision":                "accent",
+  "Simulation":                     "info",
+  "Pytorch":                        "warning",
 };
 
 function tagColor(label: string): ColorScheme {

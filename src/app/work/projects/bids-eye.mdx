@@ -17,6 +17,72 @@ link: "https://github.com/paul188"
 
 ## Overview
 
+<style>{`
+  .bidseye-cta {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 20px 24px;
+    margin: 4px 0 24px;
+    background: linear-gradient(135deg, rgba(78,121,167,0.12) 0%, rgba(6,182,212,0.10) 100%);
+    border: 1px solid rgba(78,121,167,0.30);
+    border-radius: 14px;
+  }
+  .bidseye-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 13px 26px;
+    background: linear-gradient(135deg, #4e79a7 0%, #06b6d4 100%);
+    color: #fff;
+    border-radius: 10px;
+    font-weight: 700;
+    font-size: 15px;
+    text-decoration: none;
+    letter-spacing: 0.01em;
+    box-shadow: 0 4px 18px rgba(78,121,167,0.45);
+    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
+  }
+  .bidseye-link:hover {
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 28px rgba(78,121,167,0.65);
+    filter: brightness(1.08);
+  }
+  .bidseye-link:active {
+    transform: translateY(0) scale(0.98);
+  }
+  .bidseye-link-arrow {
+    font-size: 17px;
+    transition: transform 0.18s ease;
+    display: inline-block;
+  }
+  .bidseye-link:hover .bidseye-link-arrow {
+    transform: translate(3px, -3px);
+  }
+  .bidseye-note {
+    font-size: 13px;
+    color: var(--neutral-on-background-weak);
+    line-height: 1.6;
+    margin: 0;
+  }
+  .bidseye-note a {
+    color: #4e79a7;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+`}</style>
+
+<div className="bidseye-cta">
+  <a href="https://www.bidseye.xyz" target="_blank" className="bidseye-link">
+    Try BIDS-Eye
+    <span className="bidseye-link-arrow">↗</span>
+  </a>
+  <p className="bidseye-note">
+    The platform is password-protected — if you'd like to try it, send me a mail at <a href="mailto:pauljoh@gmx.de">pauljoh@gmx.de</a> and I'll share the credentials. Authentication was introduced to prevent token abuse from the underlying LLM API.
+  </p>
+</div>
+
 BIDS-Eye is a natural-language search engine over **OpenNeuro**, the primary open-access repository for human neuroimaging data (MRI, fMRI, EEG, MEG, PET). It answers queries like *"datasets with ≥ 50 left-handed participants who did an n-back task with fMRI"* by crawling ~1,000 datasets from AWS S3, indexing them into a unified PostgreSQL database, and translating free-text queries into SQL through a three-tier RAG pipeline backed by a 1,466-concept biomedical ontology.
 
 ---

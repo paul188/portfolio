@@ -1,0 +1,234 @@
+---
+title: "NeuroDaRe: Healthcare Data Trust Platform"
+publishedAt: "2025-06-01"
+summary: "A full-stack healthcare data-trust platform enabling privacy-preserving sharing of radiological DICOM data between providers and researchers — with Keycloak OIDC, a 6-step pseudonymisation pipeline, and a 17-container Docker architecture."
+images:
+  - "/images/projects/neurodare-service-map.png"
+team:
+  - name: "Paul Johannssen"
+    role: "Software Lead"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: "https://github.com/paul188/DaRe"
+---
+
+## Overview
+
+NeuroDaRe (GesundheitsDAtentreuhand-REallabor) is a funded research prototype for a **Healthcare Data Trust** — an institutional intermediary that allows medical data providers and researchers to exchange sensitive radiological data without either party having unmediated access to the other's systems. Data providers upload DICOM studies; data users request access; the Data Trust validates, pseudonymises, and brokers the exchange under ethical and legal constraints.
+
+The platform is built around three interlocking concerns: **privacy** (DICOM pseudonymisation with an isolated PHI database), **security** (multi-layer runtime threat detection, antivirus scanning, VPN-gated administration), and **auditability** (centralised ELK logging, full Alembic migration history, Keycloak event webhooks). It runs as 17 Docker containers with a single `make up-build` entrypoint and is deployed at [neurodare.org](https://www.neurodare.org).
+
+<Button href="https://github.com/paul188/DaRe" target="_blank" variant="secondary" size="m" suffixIcon="arrowUpRight">
+  View on GitHub
+</Button>
+
+---
+
+## 1. The Data Trust Model
+
+NeuroDaRe implements a three-role trust model. Keycloak enforces role-gating at the OIDC token level — every API request carries a JWT whose `realm_access.roles` claim is verified by FastAPI middleware before any route handler executes.
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Role</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Assigned by</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Permissions</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>data_provider</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Admin via Keycloak console</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Upload DICOM studies, create data pools, manage access grants</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>data_user</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Admin via Keycloak console</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Browse dataset catalogue, request access, view approved studies in OHIF viewer</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>pending_approval</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Assigned automatically on registration</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Login only — no data access until role upgraded by admin</td>
+    </tr>
+  </tbody>
+</table>
+
+New registrations trigger a Keycloak webhook that notifies the FastAPI backend. Until an admin assigns a role, the user lands on a holding screen. This ensures no unvetted researcher ever touches clinical data.
+
+---
+
+## 2. Service Architecture
+
+The platform runs **17 Docker containers** on a shared `neuro_network` bridge. All external traffic enters through nginx, which terminates TLS and reverse-proxies to the appropriate upstream. No application container is directly exposed to the internet.
+
+<ClickableImage src="/images/projects/neurodare-service-map.png" alt="NeuroDaRe service map — 17 Docker containers on a shared bridge network" />
+
+**Request path (production):**
+
+```
+Browser → nginx (:443)
+              ├─ /api/*    → FastAPI backend
+              ├─ /auth/*   → Keycloak
+              └─ /*        → Vue.js SPA
+```
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Container</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Image</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Role</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>nginx_proxy</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>nginx:stable-alpine</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Reverse proxy, TLS termination</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>fastapi_backend</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>./app/Dockerfile</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>REST API, DICOM pipeline, session management</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>vue_frontend</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>./frontend/Dockerfile</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Vue.js SPA</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>keycloak</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>quay.io/keycloak/keycloak</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>OIDC authentication, user and role management</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>postgres / postgres_phi / postgres_keycloak / postgres_orthanc</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>postgres:16</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Four isolated PostgreSQL instances (see §5)</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>orthanc_server</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>./services/orthanc/Dockerfile</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>DICOM storage with S3 backend</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>redis_cache</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>redis:7-alpine</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Session store, job status cache</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>clamav_scanner</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>clamav/clamav</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Antivirus scan on every uploaded file</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>elasticsearch + kibana + fluent_bit</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Elastic Stack 8.12</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Centralised log collection, storage, and visualisation</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>falco</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>falcosecurity/falco</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Kernel-level runtime security monitoring</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>crowdsec</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>crowdsecurity/crowdsec</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Collaborative threat detection and IP banning</td></tr>
+    <tr><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>wireguard</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>linuxserver/wireguard</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>VPN — all admin interfaces accessible only over tunnel</td></tr>
+  </tbody>
+</table>
+
+---
+
+## 3. DICOM Upload Pipeline
+
+Uploading a radiological study triggers a six-step background pipeline (`app/services/upload_session/background_tasks.py`). Each step must pass before the next executes; any failure aborts the session and notifies the provider.
+
+<ClickableImage src="/images/projects/neurodare-dicom-pipeline.png" alt="NeuroDaRe DICOM upload pipeline — validation, virus scan, pseudonymisation, Orthanc ingestion" />
+
+1. **File arrives** — `POST /api/provider/uploads/` receives the multipart upload and writes files to a temporary session directory.
+2. **DICOM validation** — pydicom-validator checks conformance. Non-DICOM files are rejected entirely; the platform accepts only DICOM.
+3. **Virus scan** — every file is passed to the ClamAV daemon via clamd socket. Infected files abort the session.
+4. **Pseudonymisation** — idiscore replaces all PHI-bearing DICOM tags (`PatientName`, `PatientID`, `BirthDate`, etc.) with `ANON_XXXXXXXX` values. The original-to-pseudonym mapping is written to the **PHI database** — the only location in the entire system where original patient identifiers are retained (see §5).
+5. **Orthanc ingestion** — pseudonymised files are pushed to Orthanc via DICOMweb HTTP. Orthanc writes the pixel data to the S3 object store and indexes the study in its own PostgreSQL instance.
+6. **Metadata persistence** — a dataset record (study metadata, pseudonymous identifiers, access policy) is written to the metadata PostgreSQL database, making the study discoverable to data users.
+
+---
+
+## 4. Authentication Flow
+
+NeuroDaRe uses Keycloak 26 as a full OIDC provider. FastAPI acts as a confidential OAuth2 client — it never handles passwords directly.
+
+<ClickableImage src="/images/projects/neurodare-auth-flow.png" alt="NeuroDaRe OIDC authentication flow — Keycloak code exchange via FastAPI" />
+
+1. `GET /api/login` — FastAPI constructs the Keycloak authorisation URL (including PKCE parameters) and redirects the browser.
+2. **Keycloak authentication** — the user authenticates at `/auth/realms/fastapi_realm/`. If email 2FA is enrolled (via the `keycloak-2fa-email-authenticator` plugin), a one-time code is sent and verified here.
+3. `GET /api/callback?code=...` — Keycloak redirects back to FastAPI with an authorisation code.
+4. **Token exchange** — FastAPI exchanges the code for an access token and ID token via the Keycloak token endpoint, then stores the session in Redis.
+5. **Role dispatch** — FastAPI reads the `realm_access.roles` claim and redirects to the role-appropriate dashboard (`/provider`, `/user`, or a pending-approval screen).
+
+Session cookies are `HttpOnly`, `Secure`, and `SameSite=Lax`. CSRF tokens are signed separately with a distinct secret key.
+
+---
+
+## 5. Multi-Database Architecture
+
+Four isolated PostgreSQL 16 instances serve distinct purposes. Isolation is enforced by separate credentials and separate Docker volumes — the API holds no cross-database connection strings in a single pool.
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Database</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Purpose</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Sensitive?</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>metadata_db</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Datasets, data pools, users, permissions, notifications</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>No — pseudonymous only</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>postgres_phi</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>pseudonym_map table: original identifiers ↔ ANON codes</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Yes — sole location of original PHI</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>keycloak_db</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Keycloak internal state, hashed credentials, session records</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Yes — user credentials</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>orthanc_db</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Orthanc DICOM study/series/instance index</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>No — pseudonymised DICOM metadata only</td>
+    </tr>
+  </tbody>
+</table>
+
+The PHI database is the architectural linchpin of the privacy model. A data breach of `metadata_db` or `orthanc_db` exposes only pseudonymous identifiers — re-identification requires a separate attack on `postgres_phi`, which carries its own credentials, its own Docker volume, and is never queried by any route other than the pseudonymisation step of the upload pipeline.
+
+---
+
+## 6. Security Stack
+
+NeuroDaRe treats security as a layered concern: each tool operates at a different level of the stack and no single misconfiguration can open a full breach.
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Tool</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Layer</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>What it does</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>CrowdSec</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Network</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Parses nginx logs for attack patterns; auto-bans offending IPs via nginx `deny` directives</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Falco</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Runtime / Kernel</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>eBPF-based syscall monitoring; alerts on unexpected process spawns, file access, and privilege escalation inside containers</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>ClamAV</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Application</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Scans every uploaded DICOM file before pseudonymisation; infected sessions are aborted</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>WireGuard VPN</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Access control</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>All admin interfaces (Keycloak admin console, Kibana, Orthanc) are only reachable via VPN tunnel</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Trivy</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>CI / Supply chain</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Scans Docker images for known CVEs in OS packages and Python dependencies</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Semgrep</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Static analysis</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Checks Python source for injection patterns, insecure defaults, and secrets in code</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## Tech Stack
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Category</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Technology</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Containerisation</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Docker, Docker Compose</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Frontend</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Vue.js, Vite</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Backend</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>FastAPI (Python), Alembic, Pydantic</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Authentication</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Keycloak 26 (OIDC / OAuth2), email 2FA plugin</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Database</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>PostgreSQL 16 (×4 isolated instances)</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Medical storage</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Orthanc DICOM server, S3 object storage</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>DICOM pipeline</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>pydicom-validator, idiscore</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Caching</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Redis 7</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Logging</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Elasticsearch 8, Kibana, Fluent Bit</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Security</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>CrowdSec, Falco, ClamAV, WireGuard, Trivy, Semgrep</td></tr>
+    <tr><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Reverse proxy</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>nginx (TLS termination, Let's Encrypt)</td></tr>
+  </tbody>
+</table>

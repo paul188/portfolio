@@ -1,0 +1,349 @@
+---
+title: "BIDS-Eye: Neuroimaging Dataset Search Engine"
+publishedAt: "2025-06-01"
+summary: "A full-stack natural-language search engine over the OpenNeuro neuroimaging repository: crawls ~1,000 BIDS datasets from AWS S3, indexes them into a unified PostgreSQL database, and converts free-text queries into SQL through a three-tier RAG pipeline backed by a 1,466-concept biomedical ontology."
+images: []
+team:
+  - name: "Paul Johannssen"
+    role: "Lead Engineer"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: "https://github.com/paul188"
+---
+
+## Overview
+
+BIDS-Eye is a natural-language search engine over **OpenNeuro**, the primary open-access repository for human neuroimaging data (MRI, fMRI, EEG, MEG, PET). It answers queries like *"datasets with ≥ 50 left-handed participants who did an n-back task with fMRI"* by crawling ~1,000 datasets from AWS S3, indexing them into a unified PostgreSQL database, and translating free-text queries into SQL through a three-tier RAG pipeline backed by a 1,466-concept biomedical ontology.
+
+---
+
+## 1. OpenNeuro and the BIDS Standard
+
+### OpenNeuro
+
+OpenNeuro (`openneuro.org`) hosts thousands of neuroimaging datasets from research groups worldwide. Datasets are identified by accession numbers (e.g. `ds000228`, `ds004504`). Raw data lives on AWS S3 under the `openneuro.org` bucket, publicly accessible via anonymous boto3 for most datasets.
+
+### The BIDS Standard
+
+The Brain Imaging Data Structure (BIDS) is a community standard defining how a neuroimaging dataset must be organised on disk. Its core insight: **file paths and JSON sidecars *are* the metadata** — no separate database needed.
+
+```
+ds000228/
+├── dataset_description.json      ← name, authors, license, BIDS version
+├── participants.tsv               ← one row per subject: age, sex, handedness, diagnosis
+├── sub-001/
+│   ├── anat/
+│   │   └── sub-001_T1w.nii.gz
+│   └── func/
+│       ├── sub-001_task-rest_bold.nii.gz
+│       └── sub-001_task-rest_bold.json   ← sidecar: TR, slice timing, etc.
+└── derivatives/
+    └── fmriprep/sub-001/...
+```
+
+Every property is encoded as **entities** in the filename: `sub-` (subject), `ses-` (session), `task-` (task name), `run-` (run number), `acq-` (acquisition protocol). The **suffix** (`bold`, `T1w`, `eeg`) encodes what kind of data it is; the **datatype folder** (`func/`, `anat/`, `dwi/`, `fmap/`) encodes the modality category.
+
+This rigid structure makes BIDS-Eye possible: because every dataset follows the same conventions, a unified SQL database can be built across thousands of datasets without bespoke parsing.
+
+---
+
+## 2. The BIDS-SQL Database Schema
+
+### Design Principles
+
+pybids (the reference Python BIDS library) builds an in-process SQLite index of one dataset at a time. BIDS-Eye generalises this to a **persistent PostgreSQL database spanning thousands of datasets simultaneously**.
+
+Three design principles govern the schema:
+
+1. **Hot entities get real columns** — properties most commonly filtered (`subject`, `session`, `task`, `suffix`, `datatype`, `sex`, `handedness`, `diagnosis`) are first-class indexed columns.
+2. **Cold entities go into JSONB overflow** — BIDS has ~30 secondary entities (`acq`, `ce`, `dir`, `echo`, `hemi`, `space`, etc.) and arbitrary sidecar metadata. These land in `other_entities` (JSONB with GIN index), queryable via `->` operators without schema migrations.
+3. **Upserts are idempotent** — every write uses `ON CONFLICT … DO UPDATE`, so re-crawling a dataset refreshes rows rather than duplicating them.
+
+### Core Tables
+
+**`bids_datasets`** — one row per dataset (raw or derivative)
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Column</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Type</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Notes</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>id</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>UUID</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Primary key</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>root_path</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT UNIQUE</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Filesystem or virtual path — the upsert key</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>name, bids_version, dataset_type</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>From dataset_description.json</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>parent_id</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>UUID FK (self)</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Links derivative datasets to their raw parent</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>source_type</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>'openneuro', 'openneuro_graphql', 'local', 'datalad'</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>accession_id, remote_url</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>S3 URL for OpenNeuro datasets</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>authors[], funding[], paper_references[]</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT[]</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>GIN-indexed arrays</td></tr>
+    <tr><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>validation_status, validation_errors</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT/JSON</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>From bids-validator</td></tr>
+  </tbody>
+</table>
+
+**`bids_objects`** — one row per file in any dataset
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Column</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Type</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Notes</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>id</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>UUID</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Primary key</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>path</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT UNIQUE</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Upsert key</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>dataset_id</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>UUID FK</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Owning dataset</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>subject, session, task, run, suffix, datatype</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>First-class indexed columns</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>subject_index, session_index</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>INT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Numeric form for range queries</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>other_entities</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>JSONB</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Secondary entities + merged sidecar metadata (GIN index)</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>is_remote</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>BOOL</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>True for S3 files not downloaded locally</td></tr>
+    <tr><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>class_</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>TEXT</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>BIDSImageFile, BIDSDataFile, BIDSJSONFile, BIDSFile</td></tr>
+  </tbody>
+</table>
+
+**`bids_participants`** — one row per subject per dataset (from `participants.tsv`). Hot columns: `age` (FLOAT), `sex`, `handedness`, `diagnosis` (TEXT, btree-indexed). Non-standard columns land in `extra` (JSONB).
+
+**`object_associations`** — directed edges between files with kinds: `"Metadata"` (image↔JSON), `"IntendedFor"` (image↔fieldmap), `"Events"` (BOLD↔events.tsv), `"Child"` (raw↔derivative).
+
+---
+
+## 3. The Crawlers
+
+### Why Crawling is Non-Trivial
+
+OpenNeuro hosts ~1,000 datasets. Cloning all raw imaging files (`.nii.gz`) would require terabytes. BIDS-Eye uses **ghost indexing**: download only metadata files (`.json`, `.tsv`), create empty stub files for imaging data, run the full pybids pipeline on the local mirror, mark all objects `is_remote=True`.
+
+### Primary Path — S3 Anonymous Access
+
+**Step 1 — S3 listing.** Anonymous boto3 client paginates through the `openneuro.org` bucket. No credentials required for public datasets.
+
+**Step 2 — Mirror building** (cached at `~/.bids-sql/openneuro/&#123;accession_id&#125;/`)
+- `.json` and `.tsv` files: downloaded with full content; JSON files are repaired for common authoring mistakes (trailing commas, control characters, encoding issues)
+- `.nii.gz`, `.mgz`, other imaging files: created as **empty stubs** — 0 bytes is enough for pybids to see them in the tree
+- `._*` AppleDouble files (macOS artifacts): skipped entirely
+- Smart caching: existing files are reused unless they are 0-byte or JSON-corrupt
+
+**Step 3 — pybids indexing.** `BIDSLayout` is run on the local mirror, parsing every filename, validating entities, and building an internal index. BIDS-Eye then upserts that index into PostgreSQL.
+
+**Step 4 — Post-indexing stamps.** `source_type="openneuro"`, `accession_id`, `remote_url=s3://openneuro.org/&#123;accession_id&#125;` are set. Promoted metadata fields (`authors`, `license`, `doi`, `funding`, `description_text`) are extracted from `dataset_description.json`.
+
+### Fallback — GraphQL API
+
+Some datasets are access-restricted on S3. The fallback hits `https://openneuro.org/crn/graphql` and synthesises synthetic participant and object rows. `source_type="openneuro_graphql"` distinguishes synthetic from real records in queries.
+
+### Scheduler
+
+APScheduler runs `run_crawl_cycle()` on a configurable interval (default: 1 hour). One dataset is processed at a time via `asyncio.Semaphore(1)`. Crawler state is exposed at `GET /api/crawler/status`.
+
+---
+
+## 4. Data Normalisation and value_mappings.yaml
+
+### The Problem
+
+Raw BIDS datasets are terminologically inconsistent. The same diagnosis appears as `"MDD"`, `"major depressive disorder"`, `"clinical depression"`, `"depression"`, and `"296.20"` across different datasets. Without normalisation, no cross-dataset query is possible.
+
+`RAG/value_mappings.yaml` is the **unified ontology** mapping all surface forms onto canonical codes — **1,466 concepts across 8 categories** (diagnosis, task, suffix, datatype, sex, handedness, sidecar_fields, participant_extra_fields).
+
+### Structure: Flat SKOS
+
+```yaml
+diagnosis:
+  major_depressive_disorder:
+    label: "major depressive disorder"
+    standard_code: "major_depressive_disorder"
+    broader: [mood_disorders]
+    synonyms:
+      - term: "MDD"
+        weight: 0.85
+      - term: "296.20"        # ICD-9 code as synonym
+        weight: 0.6
+    codes: [mdd, depression, depressive_disorder]
+```
+
+Flat (non-nested) layout enables O(1) lookup and **polyhierarchy** — a concept can have multiple parents via `broader: [parent_a, parent_b]`.
+
+### Weight System
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Weight</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Meaning</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Example</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>1.0</td><td style={{padding:'6px 10px'}}>Fully canonical</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'major depressive disorder'</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.85–0.99</td><td style={{padding:'6px 10px'}}>Robust abbreviation</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'MDD', 'major depression'</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.5–0.84</td><td style={{padding:'6px 10px'}}>Domain-specific, usually correct</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'unipolar depression'</td></tr>
+    <tr><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.1–0.49</td><td style={{padding:'6px 10px'}}>Weak or ambiguous</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'low mood', 'sadness'</td></tr>
+  </tbody>
+</table>
+
+The retriever raises the fuzzy-match threshold for low-confidence synonyms:
+
+```python
+effective_threshold = 80 + (1.0 - weight) × 8
+```
+
+A synonym with weight 0.5 requires fuzzy score 84 (not 80) to resolve.
+
+### Synonym Generation (expand_synonyms.py)
+
+Synonyms are mined from three corpus sources and validated by LLM: PostgreSQL `description_text`, CrossRef REST API (titles and abstracts via DOI), and OpenAlex REST API (neuroscience subset, 250M+ works). LLM backend: Claude Sonnet (preferred) → Gemini 2.5 Flash (fallback).
+
+Weight: `0.6 × (fraction_of_texts_containing_term) + 0.4 × log_scaled_frequency`, floored at 0.1.
+
+### Collision Detection
+
+A collision is a synonym in concept A that is also the label or high-weight (≥ 0.7) synonym of concept B. Detection uses RapidFuzz WRatio. The `task` field alone had **239 CRITICAL** and **1,075 HIGH** collisions — most commonly a parent concept mistakenly claiming a child's label. `fix_collisions.py` applies 299 curated removals as line-level text surgery.
+
+### Knowledge Graph
+
+<Button href="/bids-eye-knowledge-graph.html" target="_blank" variant="secondary" size="m" suffixIcon="arrowUpRight">
+  Open Interactive Knowledge Graph
+</Button>
+
+Shows all 1,474 concepts as circles clustered around 8 category hubs. Click any node to show only it and its direct parents/children with full metadata.
+
+---
+
+## 5. End-to-End NLQ-to-SQL Pipeline
+
+### Why Not SQLCoder or Biomedical Language Models?
+
+SQLCoder (fine-tuned Code Llama) was evaluated but abandoned: requires a GPU inference endpoint, has no neuroscience vocabulary, and with the scaffolding needed to give it vocabulary, Gemini performs equivalently without a GPU. Biomedical generative models (BioBERT, PubMedBERT) are not instruction-tuned and would require substantial fine-tuning.
+
+BioLORD-2023-C and SapBERT are **retained for RAG retrieval** where they excel at entity linking — but only for retrieval, not generation.
+
+**Current architecture:** Gemini for high-level reasoning + domain-specific RAG (`value_mappings.yaml` + biomedical embeddings) for vocabulary resolution.
+
+### Example Query
+
+> *"datasets with resting-state fMRI and at least 20 autistic participants"*
+
+### Stage 1 — Entity Extraction
+
+`RAG/llamaindex_extraction.py` — Gemini 2.5 Flash returns a structured `UserQueryEntities` Pydantic object:
+
+```python
+UserQueryEntities(
+    diagnosis=["autism"],
+    task=["resting state"],
+    datatype=["fMRI"],
+    suffix=[], sex=[], handedness=[], ...
+)
+```
+
+### Stage 2 — RAG Resolution: Surface Forms → Canonical Codes
+
+**This is not standard RAG.** Most RAG systems retrieve text chunks for an LLM to paraphrase. This one resolves surface forms to canonical database keys — the string `autism_spectrum_disorder` that goes directly into a SQL `WHERE` clause. The LLM never touches the ontology vocabulary; it only sees pre-resolved codes. This is closer to **biomedical entity linking** than to generative RAG.
+
+`RAG/retriever.py` runs a three-tier cascade:
+
+```
+User term
+    │
+    ▼
+Tier 1 — Exact match       O(1) dict lookup against leaf_db / group_db
+    │ miss
+    ▼
+Tier 2 — Fuzzy (WRatio)    weight-adjusted threshold: 80 + (1.0 − w) × 8
+    │ score < threshold
+    ▼
+Tier 3a — BioLORD-2023-C   cosine ≥ 0.75  (SNOMED-CT / MedDRA)
+    │ miss
+    ▼
+Tier 3b — SapBERT           cosine ≥ 0.65  (UMLS 4M+ entities)
+    │ miss
+    ▼
+VOCAB MISS → ILIKE hint injected into SQL
+```
+
+**Tier 1 — Lookup structures.** `yaml_to_llamaindex.py` builds six in-memory dicts on startup via a two-pass parse. The first pass registers all leaf concepts; the second does a DFS over the `broader` DAG to populate `group_db` — so a group-node lookup returns all descendant canonical codes, not just the group itself.
+
+**Tier 2 — Why WRatio, and the weight-adjusted threshold.** WRatio is a meta-scorer that tries plain Levenshtein, token-sorted, and token-set variants and returns the highest — the right choice when terms vary in both word order (`"fMRI resting state"` vs `"resting state fMRI"`) and abbreviation length (`"ADHD"` vs `"attention deficit hyperactivity disorder"`). The threshold is not fixed at 80: it rises as synonym weight falls.
+
+```python
+effective_threshold = 80 + (1.0 - synonym_weight) × 8
+```
+
+`"autism"` (weight 1.0) fires at score ≥ 80. `"developmental disorder"` (weight 0.3) requires score ≥ 85.6 — a low-confidence synonym only matches if the user typed it nearly verbatim. This encodes *how exclusively a term belongs to a concept*.
+
+**Tier 3 — Why BioLORD before SapBERT.** BioLORD is trained on curated SNOMED-CT / MedDRA concept pairs — very high precision for clinical terms, but narrower coverage. SapBERT covers ~4M UMLS entities with higher recall but lower precision. Running BioLORD first with the higher threshold (0.75) captures precise clinical matches; SapBERT at 0.65 catches the longer tail. Both models have embeddings pre-computed for all ~29 000 synonym surface forms and stored as `.npz` files keyed on a hash of `value_mappings.yaml` — only the user's term is embedded live at query time.
+
+**Multi-field simultaneous search.** `"fMRI"` is simultaneously a `datatype` (`func/` folder) and a `suffix` (`bold`). The resolver searches `datatype`, `suffix`, and `task` in parallel and returns all hits. Pure modality abbreviations are explicitly filtered from the `task` field to prevent `"fMRI"` → a task concept that has `"fMRI"` as an incidental synonym.
+
+**Hierarchy pruning.** After resolution, if a result set contains both a concept and one of its ancestors, the ancestor is dropped — a DFS up each code's `broader` chain removes any parent also present in the set. Without this, `WHERE o.datatype IN ('mri', 'func', 'functional_mri')` would match far more data than the user intended.
+
+**Vocabulary miss handling.** When all tiers fail, the preprocessor pre-computes an `ILIKE` hint during Stage 1 and holds it in the `QueryPlan`. If the LLM subsequently generates a `WHERE` filter using a made-up code, that filter is stripped and the `ILIKE` is injected instead — vocab misses degrade to approximate text search rather than SQL errors or empty results.
+
+**Resolved output:**
+```json
+{
+  "diagnosis": ["autism_spectrum_disorder"],
+  "task":      ["resting_state"],
+  "datatype":  ["func"],
+  "suffix":    ["bold"]
+}
+```
+
+### Stage 3 — SQL Generation
+
+`backend/services/text_to_sql.py` — resolved codes, full schema DDL, and few-shot examples assembled into a Gemini prompt. `RAG/join_paths.yaml` provides routing rules for which codes map to which table/column and how multi-value filters combine.
+
+**Generated SQL:**
+```sql
+SELECT DISTINCT d.id, d.name, d.accession_id,
+       COUNT(DISTINCT p.participant_id) AS n_participants
+FROM bids_datasets d
+JOIN bids_participants p ON p.dataset_id = d.id
+JOIN bids_objects o ON o.dataset_id = d.id
+WHERE p.diagnosis = 'autism_spectrum_disorder'
+  AND o.task = 'resting_state'
+  AND (o.datatype = 'func' OR o.suffix = 'bold')
+GROUP BY d.id, d.name, d.accession_id
+HAVING COUNT(DISTINCT p.participant_id) >= 20
+ORDER BY n_participants DESC;
+```
+
+### Stage 4 — Execution and Error Correction
+
+`backend/routers/query.py` — on SQL failure:
+1. **Session rollback** immediately (critical: PostgreSQL enters an error state without this)
+2. **Gemini correction** — receives the original question, failed SQL, full schema DDL, and the PostgreSQL error message
+3. **Retry** — corrected SQL is executed; response is flagged `self_corrected: True`
+4. **No infinite loop** — if the correction also fails, the original error is returned
+
+All LLM calls use exponential backoff across four model variants: `gemini-2.5-pro` → `gemini-2.5-flash` → `gemini-flash-lite` → `gemini-deep-think`.
+
+**Regression testing:** 77 hand-crafted queries tested after any pipeline change, checking minimum result count, required SQL fragments, and forbidden patterns (e.g. ILIKE on a canonical-code column).
+
+---
+
+## Key File Map
+
+```
+BIDS-Eye/
+├── BIDS-SQL/
+│   ├── db/models.py              ← SQLAlchemy ORM schema (all 4 tables)
+│   └── input_pipeline.py         ← 5-step dataset discovery and indexing
+├── crawlers/openneuro-crawler/
+│   ├── crawler_service.py        ← APScheduler crawl loop, status endpoint
+│   ├── remote/openneuro.py       ← S3 ghost indexing (primary path)
+│   └── remote/graphql.py         ← GraphQL fallback for restricted datasets
+├── RAG/
+│   ├── value_mappings.yaml       ← Flat SKOS ontology (1,466 concepts, 8 categories)
+│   ├── retriever.py              ← 3-tier resolver: exact → fuzzy → embeddings
+│   ├── expand_synonyms.py        ← Mine synonyms from DB / CrossRef / OpenAlex
+│   ├── audit_collisions.py       ← Fuzzy collision detection across all concepts
+│   ├── fix_collisions.py         ← 299 curated collision removals
+│   ├── generate_knowledge_graph.py ← Self-contained D3.js HTML visualisation
+│   └── run_query_eval.py         ← 77-query regression test suite
+├── backend/
+│   ├── main.py                   ← FastAPI app, lifespan, CORS
+│   ├── routers/query.py          ← POST /api/query: execute + error correction
+│   └── services/text_to_sql.py   ← Full 4-stage pipeline orchestration
+└── docker-compose.yml            ← postgres, backend, frontend, crawler, bids-validator
+```
+
+**Stack:** Python, PostgreSQL, FastAPI, pybids, boto3, RapidFuzz, BioLORD-2023-C, SapBERT, Gemini 2.5, Claude Sonnet, Docker Compose

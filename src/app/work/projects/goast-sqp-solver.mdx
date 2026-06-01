@@ -1,0 +1,162 @@
+---
+title: "Master Thesis — Calculating Material Behaviour Using SQP Algorithms"
+publishedAt: "2025-09-01"
+summary: "Master's thesis in Mathematics — a custom Sequential Quadratic Programming solver for calculating material behaviour in elastic thin plates: optimising folds and developable surfaces on discrete meshes."
+images:
+  - "/images/projects/goast-img_comparison.png"
+  - "/images/projects/goast-fig-25.png"
+  - "/images/projects/goast-fig-26.png"
+team:
+  - name: "Paul Johannssen"
+    role: "Author — M.Sc. Mathematics"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: "https://github.com/paul188/GOAST-SQP-Solver"
+---
+
+## Overview
+
+This Master's thesis in Mathematics (University of Bonn, Institute for Numerical Simulation) develops a numerical method for calculating how thin elastic plates deform under external forces. The central question: given a thin plate that can fold along prescribed edges, what is the *physically optimal* fold geometry that minimises the elastic bending energy?
+
+The thesis derives and implements a custom **Sequential Quadratic Programming (SQP)** solver, extending the [GOAST](https://gitlab.com/numod/goast) geometric optimisation library.
+
+**GitHub:** [paul188/GOAST-SQP-Solver](https://github.com/paul188/GOAST-SQP-Solver)
+
+---
+
+## Mathematical Formulation
+
+A thin elastic plate is modelled as its midsurface <InlineMath math="S" />, a 2D triangular mesh embedded in <InlineMath math="\mathbb{R}^3" />. A *deformation* is a map <InlineMath math="\varphi: S \to \mathbb{R}^3" />. The elastic energy splits into bending and membrane contributions:
+
+<BlockMath math="W = W_B + k_M \cdot W_M" />
+
+where <InlineMath math="W_B" /> encodes bending (resistance to curvature change) and <InlineMath math="W_M" /> encodes in-plane stretching. For *isometric* deformations — those that preserve edge lengths — the membrane term vanishes. The discrete bending energy on a triangulated mesh is:
+
+<BlockMath math="W_B = \sum_{e \in E} \|e\| \cdot \frac{(\tilde{\Theta}_e - \Theta_e)^2}{h_e}" />
+
+where <InlineMath math="e" /> ranges over mesh edges, <InlineMath math="\|e\|" /> is the edge length, <InlineMath math="\Theta_e" /> is the dihedral angle at edge <InlineMath math="e" /> in the reference configuration, <InlineMath math="\tilde{\Theta}_e" /> is the dihedral angle in the deformed configuration, and <InlineMath math="h_e" /> is the average incident triangle height.
+
+### The Constrained Optimisation Problem
+
+To optimise a *parametrised family* of fold geometries, the thesis formulates the following nonlinear equality-constrained optimisation problem:
+
+<BlockMath math="\begin{aligned} \min_{t,\, \varphi} \quad & C[\varphi] \\ \text{subject to} \quad & \nabla_\varphi W[\psi(t),\, \varphi] = 0 \end{aligned}" />
+
+Here <InlineMath math="t" /> is the fold parameter, <InlineMath math="\psi(t)" /> is the reference configuration parametrised by <InlineMath math="t" />, and the constraint enforces that <InlineMath math="\varphi" /> is a *physical equilibrium* — the plate is in mechanical balance. The constraint is itself the solution of a high-dimensional variational equation, making standard optimisation impractical.
+
+---
+
+## SQP Algorithm
+
+The thesis designs a tailored SQP method with five key components.
+
+### 1. SQP Core
+
+At each iterate <InlineMath math="(x_k, \lambda_k)" />, the SQP method linearises the constraint and solves the local quadratic subproblem:
+
+<BlockMath math="\begin{aligned} \min_{p} \quad & f(x_k) + \nabla f(x_k)^\top p + \tfrac{1}{2}\, p^\top B_k\, p \\ \text{s.t.} \quad & c(x_k) + \nabla c(x_k)^\top p = 0 \end{aligned}" />
+
+where <InlineMath math="B_k" /> approximates the Hessian of the Lagrangian <InlineMath math="\mathcal{L}(x,\lambda) = f(x) - \lambda^\top c(x)" />.
+
+### 2. BFGS Quasi-Newton Hessian Approximation
+
+Third-order derivatives of <InlineMath math="W" /> are unavailable in closed form, so the exact Hessian is replaced by a **BFGS quasi-Newton approximation**:
+
+<BlockMath math="B_{k+1} = B_k - \frac{B_k s_k s_k^\top B_k}{s_k^\top B_k s_k} + \frac{y_k y_k^\top}{y_k^\top s_k}" />
+
+with <InlineMath math="s_k = x_{k+1} - x_k" /> and <InlineMath math="y_k = \nabla_x \mathcal{L}(x_{k+1},\lambda_{k+1}) - \nabla_x \mathcal{L}(x_k, \lambda_k)" />. To prevent numerical drift, <InlineMath math="B_k" /> is reinitialised to the identity every 20 iterations.
+
+### 3. Merit Function with Armijo Line Search
+
+Each candidate step is accepted or rejected using the <InlineMath math="\ell_1" /> merit function:
+
+<BlockMath math="\Phi_1(x,\mu) = f(x) + \mu\,\|c(x)\|_1" />
+
+which balances cost minimisation against constraint satisfaction. The penalty weight <InlineMath math="\mu" /> is adapted automatically to guarantee that the SQP step is always a descent direction.
+
+### 4. Second-Order Correction
+
+Near the solution, a second-order correction step <InlineMath math="\hat{p}_k" /> is computed by solving a modified QP with right-hand side <InlineMath math="d = \nabla c(x_k) p_k - c(x_k + p_k)" />, compensating for linearisation error and achieving faster convergence.
+
+### 5. Schur Complement for Efficient Linear Algebra
+
+The KKT system at each iteration has the block form:
+
+<BlockMath math="\begin{pmatrix} B_k & \nabla c(x_k)^\top \\ \nabla c(x_k) & 0 \end{pmatrix} \begin{pmatrix} p \\ \lambda \end{pmatrix} = \begin{pmatrix} -\nabla f(x_k) \\ -c(x_k) \end{pmatrix}" />
+
+The matrix has size <InlineMath math="O(6n + 2m)" /> (<InlineMath math="n" /> = vertices, <InlineMath math="m" /> = fold DOFs). The Schur complement <InlineMath math="J = \nabla c \, B_k^{-1} \nabla c^\top" /> (size <InlineMath math="O(3n + m)" />) is factored once via LU decomposition and reused, giving an **8× asymptotic cost reduction**.
+
+### Convergence
+
+The method achieves **superlinear convergence** to KKT points under second-order sufficient conditions:
+
+<BlockMath math="\lim_{k \to \infty} \frac{\|x_{k+1} - x^*\|}{\|x_k - x^*\|} = 0" />
+
+Global convergence is guaranteed by the <InlineMath math="\ell_1" /> merit function combined with Armijo backtracking.
+
+---
+
+## Case Studies
+
+### Case Study 1 — Fold Optimisation on a Flat Plate
+
+<Row gap="16" fillWidth>
+  <Column fill gap="8">
+    <div style={{height:'320px',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--neutral-background-weak)',borderRadius:'12px',overflow:'hidden'}}>
+      <img src="/images/projects/goast-base_0.png" alt="Reference mesh with fold edges marked red" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+    </div>
+    <Text variant="label-default-s" onBackground="neutral-weak">Reference mesh — fold edges (red)</Text>
+  </Column>
+  <Column fill gap="8">
+    <div style={{height:'320px',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--neutral-background-weak)',borderRadius:'12px',overflow:'hidden'}}>
+      <img src="/images/projects/goast-img_0.png" alt="Optimal folding pattern" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+    </div>
+    <Text variant="label-default-s" onBackground="neutral-weak">Optimal folding pattern</Text>
+  </Column>
+</Row>
+
+### Case Study 2 — Second Fold Configuration
+
+<Row gap="16" fillWidth>
+  <Column fill gap="8">
+    <div style={{height:'320px',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--neutral-background-weak)',borderRadius:'12px',overflow:'hidden'}}>
+      <img src="/images/projects/goast-base_1.png" alt="Reference mesh — second configuration" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+    </div>
+    <Text variant="label-default-s" onBackground="neutral-weak">Reference mesh — second configuration</Text>
+  </Column>
+  <Column fill gap="8">
+    <div style={{height:'320px',display:'flex',alignItems:'center',justifyContent:'center',background:'var(--neutral-background-weak)',borderRadius:'12px',overflow:'hidden'}}>
+      <img src="/images/projects/goast-img_1.png" alt="Optimal folding result" style={{maxWidth:'100%',maxHeight:'100%',objectFit:'contain'}} />
+    </div>
+    <Text variant="label-default-s" onBackground="neutral-weak">Optimal folding result</Text>
+  </Column>
+</Row>
+
+### Optimality Comparison
+
+The SQP solver finds the optimal fold curvature <InlineMath math="t \approx 0.8084" />, confirmed by exhaustive parameter sweep:
+
+![Comparison of cost functional over fold parameter t](/images/projects/goast-img_comparison.png)
+
+---
+
+## Results
+
+The numerical experiments confirm both the theoretical convergence guarantees and reveal a surprising empirical phenomenon.
+
+**Convergence in practice.** The superlinear convergence predicted by theory is consistently observed across all case studies. The solver reaches machine-precision constraint satisfaction within a small number of outer SQP iterations, with the BFGS resets (every 20 iterations) visibly accelerating progress after periods of slow curvature accumulation. The Armijo line search only triggers backtracking in early iterations; near the solution, full unit steps are accepted, consistent with the theoretical prediction that backtracking becomes unnecessary close to a second-order optimal point.
+
+**Empirical invariance of optimal fold patterns.** A striking observation across the experiments is that the *optimal fold geometry appears to be invariant under changes in the fold parametrisation*. Different choices of the map <InlineMath math="t \mapsto \psi(t)" /> — even substantially different ways of sweeping through the family of reference configurations — converge to fold patterns that are geometrically indistinguishable. This suggests that the optimal fold is a property of the energy landscape itself rather than of the parametrisation chosen to explore it, an observation that may point toward a deeper geometric structure of the problem worth investigating in future work.
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Language | C++17 |
+| Build | CMake ≥ 3.14 |
+| Linear algebra | Eigen3 (sparse LU, LDLT) |
+| Geometry library | GOAST — Geometric Optimisation and Simulation Toolbox |
+| Visualisation | ParaView, Polyscope, Blender |
+| Institution | University of Bonn, Institute for Numerical Simulation |

@@ -1,0 +1,422 @@
+---
+title: "Cybersecurity and Medical Data Science"
+publishedAt: "2026-01-01"
+summary: "Co-Lecturer at University of Bonn's Cybersecurity Faculty, teaching Fully Homomorphic Encryption and Privacy-Preserving Computation applied to sensitive neuroimaging data. Students complete two hands-on labs: FHE-based correlation analysis and Private Set Intersection for patient record matching."
+images:
+  - "/images/projects/fhe-neuroimaging-diagram.png"
+  - "/images/projects/fhe-slide-concept.png"
+  - "/images/projects/fhe-psi-diagram.png"
+team:
+  - name: "Paul Johannssen"
+    role: "Co-Lecturer"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: "https://github.com/paul188/FHE-in-Medicine-Lecture"
+---
+
+## Overview
+
+As **Co-Lecturer** at the Universität Bonn, Institut für Informatik 4, I research and teach advanced cryptographic techniques applied to the specific challenges of sensitive medical data processing. The lecture covers **Fully Homomorphic Encryption (FHE)** and complementary privacy-preserving methods, grounding theoretical concepts directly in the real-world constraints of neuroimaging data infrastructure — the same domain I work in as a PhD candidate.
+
+Students complete two practical labs implementing end-to-end cryptographic systems in Python, using Docker-based microservice architectures that mirror production healthcare data platforms.
+
+---
+
+## Application in Medicine / Neuroimaging
+
+Medical data is uniquely sensitive: hospitals must share patient data for research while complying with DSGVO/GDPR, protecting patient privacy, and respecting strict institutional governance. FHE enables a three-party model that satisfies all of these simultaneously.
+
+![FHE in neuroimaging: Researcher – DaRe (Data Trust) – Hospital sequence diagram](/images/projects/fhe-neuroimaging-diagram.png)
+
+The diagram shows the protocol used in a real neuroimaging data trust context:
+
+1. **Researcher** (Data User) sends a research query to **DaRe** (the Data Trust / Treuhaender)
+2. **Hospital** (Data Provider) sends MRI scan data alongside patient demographics — age, gender, birthdate — encrypted with its own key <InlineMath math="k" /> as <InlineMath math="\text{Enc}_k(\text{PHI})" />. Raw PHI never leaves the hospital.
+3. DaRe performs the **FHE computation** entirely on the ciphertext: <InlineMath math="f(\text{Enc}_k(\text{PHI})) = \text{Enc}_k(f(\text{PHI}))" />. Because DaRe holds no key, it has **no PHI access**. The encrypted result is sent back to the Hospital.
+4. The Hospital **decrypts with key <InlineMath math="k" />**, reviews the result, and — after institutional approval — releases the plaintext result to the Researcher.
+
+This architecture maps directly onto the lab exercises: the Treuhaender, DataProvider, and SPE components each implement one role in this flow.
+
+---
+
+## What is Fully Homomorphic Encryption?
+
+- Compute *directly on ciphertext* — no decryption needed
+- Result, once decrypted, equals plaintext computation
+- Works for **any** function <InlineMath math="f" />
+- The compute server **never sees the data**
+- Key stays with the data owner at all times
+
+The defining property:
+
+<BlockMath math="\text{Dec}\!\left(f\!\left(\text{Enc}(x)\right)\right) = f(x)" />
+
+<div style={{display:'flex',gap:'2.5rem',alignItems:'flex-start',margin:'1.5rem 0',flexWrap:'wrap'}}>
+  {/* Flowchart */}
+  <div style={{display:'flex',flexDirection:'column',alignItems:'center',gap:'0',minWidth:'180px',flexShrink:0}}>
+    <div style={{background:'#a8d8c8',border:'1px solid #7bbfad',borderRadius:'6px',padding:'8px 24px',fontSize:'0.9rem',fontWeight:600,color:'#1a3a30',textAlign:'center'}}>
+      Plaintext <em>x</em>
+    </div>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',margin:'2px 0'}}>
+      <span style={{fontSize:'0.7rem',color:'#666'}}>encrypt</span>
+      <span style={{fontSize:'1.2rem',color:'#555',lineHeight:1}}>↓</span>
+    </div>
+    <div style={{border:'1.5px dashed #888',borderRadius:'8px',padding:'10px 14px',display:'flex',flexDirection:'column',alignItems:'center',gap:'0',width:'100%'}}>
+      <span style={{alignSelf:'flex-end',fontSize:'0.68rem',color:'#888',fontStyle:'italic',marginBottom:'6px'}}>no key needed</span>
+      <div style={{background:'#7ab3cc',border:'1px solid #4d8fad',borderRadius:'6px',padding:'8px 16px',fontSize:'0.9rem',fontWeight:600,color:'#fff',textAlign:'center',width:'100%'}}>
+        Ciphertext Enc(<em>x</em>)
+      </div>
+      <div style={{display:'flex',flexDirection:'column',alignItems:'center',margin:'2px 0'}}>
+        <span style={{fontSize:'0.7rem',color:'#666'}}>compute <em>f</em></span>
+        <span style={{fontSize:'1.2rem',color:'#555',lineHeight:1}}>↓</span>
+      </div>
+      <div style={{background:'#7ab3cc',border:'1px solid #4d8fad',borderRadius:'6px',padding:'8px 16px',fontSize:'0.9rem',fontWeight:600,color:'#fff',textAlign:'center',width:'100%'}}>
+        <em>f</em>(Enc(<em>x</em>))
+      </div>
+    </div>
+    <div style={{display:'flex',flexDirection:'column',alignItems:'center',margin:'2px 0'}}>
+      <span style={{fontSize:'0.7rem',color:'#666'}}>decrypt</span>
+      <span style={{fontSize:'1.2rem',color:'#555',lineHeight:1}}>↓</span>
+    </div>
+    <div style={{background:'#a8d8c8',border:'1px solid #7bbfad',borderRadius:'6px',padding:'8px 24px',fontSize:'0.9rem',fontWeight:600,color:'#1a3a30',textAlign:'center'}}>
+      <em>f</em>(<em>x</em>)
+    </div>
+  </div>
+
+  {/* Explanation */}
+  <div style={{flex:1,minWidth:'200px',paddingTop:'0.25rem'}}>
+    <p style={{margin:'0 0 0.75rem',fontSize:'0.95rem'}}>
+      The plaintext <em>x</em> is encrypted once. All computation happens inside the dashed region — entirely on ciphertexts, with no key present. Only the final result is decrypted, and <strong>the decryption key never leaves the data owner</strong>.
+    </p>
+    <p style={{margin:'0 0 0.75rem',fontSize:'0.95rem'}}>
+      The core mechanism: a ciphertext is plaintext plus <em>structured noise</em>. The noise hides the data; the algebraic structure lets you compute on it. Each operation adds more noise — FHE schemes include a <em>bootstrapping</em> procedure that periodically refreshes the noise budget, enabling unbounded computation depth.
+    </p>
+    <p style={{margin:0,fontSize:'0.95rem'}}>
+      This is what makes FHE uniquely suited to medical data: a research institution can run statistical analyses on a hospital's patient records without the hospital ever handing over readable data.
+    </p>
+  </div>
+</div>
+
+**Trade-offs vs. standard encryption:**
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.9rem'}}>
+  <thead>
+    <tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+      <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700}}>Property</th>
+      <th style={{padding:'8px 12px',textAlign:'center',fontWeight:700}}>Standard Encryption</th>
+      <th style={{padding:'8px 12px',textAlign:'center',fontWeight:700}}>FHE</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px'}}>Computation on ciphertext</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✗</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✓</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px'}}>Decryption required for analysis</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✓</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✗</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px'}}>Computational overhead</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>Low</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>High (10³–10⁶×)</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px'}}>Key stays with data owner</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>Varies</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✓ Always</td>
+    </tr>
+    <tr>
+      <td style={{padding:'8px 12px'}}>GDPR / DSGVO-safe processing</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>Difficult</td>
+      <td style={{padding:'8px 12px',textAlign:'center'}}>✓</td>
+    </tr>
+  </tbody>
+</table>
+
+The computational overhead is an **acceptable trade-off** in medical settings where DSGVO compliance and patient privacy outweigh the cost of compute time.
+
+---
+
+## Lab 1 — FHE Correlation Analysis
+
+### About the Project
+
+This lab is developed in the **Cyber Security Lab Medical Data Privacy** to demonstrate privacy-preserving computation on sensitive medical data. The prototype uses a secure architecture inspired by real-world healthcare data sharing to compute the correlation between age and brain volume.
+
+The focus is on a scenario where a data requester wants statistical insight, while sensitive patient-level information remains protected.
+
+### Background and Motivation
+
+Medical data is highly sensitive. In healthcare and research settings, institutions (e.g., hospitals) must balance enabling useful research, protecting patient privacy, and complying with legal requirements such as **DSGVO / GDPR**.
+
+Traditional data analysis often requires sharing raw data, which increases privacy and compliance risks. This lab explores the secure alternative of using homomorphic encryption to compute useful statistics without exposing the raw data.
+
+### Project Goal
+
+The main implementation goals are:
+
+- Calculating the correlation between **age** and **brain volume** while using homomorphic encryption
+- Implementing a real-life-inspired architecture
+
+For the lab, fake data is used for sensitive information and brain volumes to demonstrate functionality.
+
+### Why FHE? Security over Efficiency
+
+The focus of this project is not on optimising computational efficiency, but on **keeping data secure and patient information private**. FHE and similar privacy-preserving methods introduce computational overhead. In this project, that overhead is treated as an acceptable trade-off for stronger privacy.
+
+### The Pearson Correlation Formula
+
+The Pearson correlation coefficient between <InlineMath math="X" /> (age) and <InlineMath math="Y" /> (brain volume) over <InlineMath math="n" /> observations is:
+
+<BlockMath math="r = \frac{n\sum_{i=1}^n x_i y_i - \sum_{i=1}^n x_i \cdot \sum_{i=1}^n y_i}{\sqrt{\!\left(n\sum_{i=1}^n x_i^2 - \Bigl(\sum_{i=1}^n x_i\Bigr)^{\!2}\right) \cdot \left(n\sum_{i=1}^n y_i^2 - \Bigl(\sum_{i=1}^n y_i\Bigr)^{\!2}\right)}}" />
+
+The numerator and the squared terms are **sums of products** — operations FHE supports natively via ring addition and multiplication.
+
+#### Statistical Confidence
+
+Significance of <InlineMath math="r" /> is tested via the <InlineMath math="t" />-statistic under <InlineMath math="H_0: \rho = 0" />:
+
+<BlockMath math="t = r \sqrt{\frac{n-2}{1-r^2}}, \quad t \sim t_{n-2}" />
+
+For confidence intervals, Fisher's <InlineMath math="z" />-transformation stabilises the variance:
+
+<BlockMath math="z = \tanh^{-1}(r) = \frac{1}{2}\ln\!\left(\frac{1+r}{1-r}\right), \quad z \;\dot{\sim}\; \mathcal{N}\!\!\left(\tanh^{-1}(\rho),\; \tfrac{1}{n-3}\right)" />
+
+A 95% CI for <InlineMath math="\rho" /> is obtained by transforming <InlineMath math="\bigl[z \pm 1.96/\sqrt{n-3}\bigr]" /> back via <InlineMath math="\tanh" />.
+
+#### Why Division and Inversion Are Hard in FHE
+
+FHE schemes operate over **polynomial rings** — natively supporting addition and multiplication. Division and square roots have no closed polynomial form and must be approximated:
+
+- **Division** <InlineMath math="(1/x)" />: approximated by Newton–Raphson — <InlineMath math="x_{k+1} = x_k(2 - ax_k)" /> — each iteration doubling the multiplicative circuit depth.
+- **Square root** <InlineMath math="(\sqrt{x})" />: requires a polynomial approximation (Goldschmidt or Chebyshev series), adding further multiplicative levels.
+- Each multiplicative level consumes noise budget; without bootstrapping, circuits of depth > 10–20 become infeasible.
+
+**This lab computes the full correlation entirely under FHE.** Three strategies make this feasible:
+
+**Strategy 1 — Newton–Raphson for the reciprocal:**
+
+<BlockMath math="x_{k+1} = x_k\,(2 - a\,x_k) \;\xrightarrow{\;k\to\infty\;}\; 1/a" />
+
+Quadratic convergence — 3–5 iterations suffice for correlation precision. Only multiplications and additions.
+
+**Strategy 2 — Newton–Raphson for the inverse square root:**
+
+<BlockMath math="y_{k+1} = \frac{y_k}{2}\!\left(3 - D\,y_k^2\right), \quad D = D_1 D_2 \;\;\Rightarrow\;\; y \to \frac{1}{\sqrt{D}}" />
+
+Then <InlineMath math="r = N \cdot y_\infty" /> — a single ciphertext multiplication.
+
+**Strategy 3 — Chebyshev polynomial approximation** on a bounded interval <InlineMath math="[a,b]" /> (known from domain bounds on age and brain volume):
+
+<BlockMath math="g(x) \approx \sum_{k=0}^{d} c_k\,T_k(x), \quad T_{k+1}(x) = 2x\,T_k(x) - T_{k-1}(x)" />
+
+The three-term recurrence uses only multiplications and additions and is fully compatible with FHE. The **CKKS scheme** (via OpenFHE) handles rescaling after each multiplication automatically; bootstrapping refreshes the noise budget for deeper circuits.
+
+### System Architecture (C4)
+
+The architecture is documented using a **C4 model**, moving from abstract system context to implementation details.
+
+#### Level 1 — System Context
+
+High-level project overview and task distribution (`MJ` = Michelle, `L` = Lennart).
+
+![C4 Level 1 — System Context Diagram](/images/projects/fhe-c4-level1.png)
+
+#### Level 2 — Container Diagram
+
+Shows the main containers and their responsibilities. These components are independently maintainable and extensible.
+
+![C4 Level 2 — Container Diagram](/images/projects/fhe-c4-level2.png)
+
+#### Level 4 — Code / Implementation (UML Class Diagram)
+
+<div style={{fontFamily:'monospace',fontSize:'0.8rem',background:'var(--neutral-background-weak)',border:'1px solid var(--neutral-border-medium)',borderRadius:'10px',padding:'1.25rem',overflowX:'auto',lineHeight:1.6}}>
+<div style={{display:'flex',gap:'1.5rem',flexWrap:'wrap',justifyContent:'center',marginBottom:'1rem'}}>
+  {[
+    {name:'DataUser',methods:['+sendResearchRequest()','+receiveResearchSolution()']},
+    {name:'InterfaceTreuhaender',stereo:'<<Interface>>',methods:['+handleDataprovider()','+getData()','+decryptResult()','+getRequest()','+createRequest()','+processRequest()','+requestCorrelation()','+handleResults()','+compute()','+resultComplete()']},
+    {name:'DataProvider',stereo:'<<Component>>',methods:['+encrypt()','+decrypt()','+processRequest()','-getSensitiveData()','-getMRIData()']},
+    {name:'SPE',stereo:'<<Secure Processing Env>>',methods:['+receiveRequest()','+processRequest()','+calculateLinearCorrelation()']},
+  ].map(cls => (
+    <div key={cls.name} style={{border:'1px solid var(--neutral-border-medium)',borderRadius:'6px',minWidth:'180px',overflow:'hidden'}}>
+      <div style={{background:'var(--neutral-background-medium)',padding:'4px 10px',fontWeight:700,textAlign:'center',fontSize:'0.82rem'}}>{cls.name}</div>
+      {cls.stereo && <div style={{padding:'2px 10px',textAlign:'center',fontSize:'0.75rem',color:'var(--neutral-on-background-weak)',borderBottom:'1px solid var(--neutral-border-weak)',fontStyle:'italic'}}>{cls.stereo}</div>}
+      <div style={{padding:'6px 10px'}}>
+        {cls.methods.map(m => <div key={m} style={{fontSize:'0.75rem',color:'var(--neutral-on-background-weak)'}}>{m}</div>)}
+      </div>
+    </div>
+  ))}
+</div>
+<table style={{width:'100%',borderCollapse:'collapse',marginTop:'0.75rem',fontSize:'0.78rem'}}>
+  <thead>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-medium)'}}>
+      <th style={{padding:'4px 8px',textAlign:'left',fontWeight:600,color:'var(--neutral-on-background-weak)'}}>From</th>
+      <th style={{padding:'4px 8px',textAlign:'center',color:'var(--neutral-on-background-weak)'}}>Rel.</th>
+      <th style={{padding:'4px 8px',textAlign:'left',fontWeight:600,color:'var(--neutral-on-background-weak)'}}>To</th>
+      <th style={{padding:'4px 8px',textAlign:'left',color:'var(--neutral-on-background-weak)'}}>Label</th>
+    </tr>
+  </thead>
+  <tbody>
+    {[
+      ['DataUser','→','InterfaceTreuhaender','sendResearchRequest()'],
+      ['InterfaceTreuhaender','→','DataUser','Research Solution'],
+      ['InterfaceTreuhaender','⇢','DataProvider','processRequest()'],
+      ['DataProvider','⇢','InterfaceTreuhaender','decrypted / encrypted Data'],
+      ['InterfaceTreuhaender','⇢','SPE','receiveRequest()'],
+      ['SPE','⇢','InterfaceTreuhaender','return / compute()'],
+    ].map(([from, rel, to, label]) => (
+      <tr key={label} style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+        <td style={{padding:'4px 8px',fontFamily:'monospace'}}>{from}</td>
+        <td style={{padding:'4px 8px',textAlign:'center',fontSize:'1rem'}}>{rel}</td>
+        <td style={{padding:'4px 8px',fontFamily:'monospace'}}>{to}</td>
+        <td style={{padding:'4px 8px',color:'var(--neutral-on-background-weak)'}}>{label}</td>
+      </tr>
+    ))}
+  </tbody>
+</table>
+</div>
+
+### Data Flow
+
+1. DataUser sends a research request to the Treuhaender
+2. Treuhaender retrieves encrypted patient data from the DataProvider
+3. Encrypted data is forwarded to the SPE
+4. SPE computes <InlineMath math="N,\, D_1,\, D_2" /> homomorphically and returns the encrypted partial results
+5. Treuhaender requests decryption from DataProvider
+6. DataProvider decrypts; final <InlineMath math="r = N / \sqrt{D_1 D_2}" /> is returned to DataUser
+
+The trust boundary is enforced by the **TrustClasses** module: any access outside a component's role raises a `TrustException`.
+
+### Implementation
+
+```
+lab_correlationFHE/
+├── src/
+│   ├── dataProvider/    # FHECryptoManager — encrypts age + brain volume
+│   ├── dataUser/        # Sends research request, receives result
+│   ├── treuhaender/     # Gateway orchestrating the full pipeline
+│   ├── spe/             # SpeCrypto — homomorphic Pearson correlation
+│   └── trustmodel/      # TrustClasses enforcing role boundaries
+├── tests/               # Unit tests for SPE crypto and request handling
+└── docker-compose.yml   # Four-service orchestration
+```
+
+**Stack:** [OpenFHE](https://openfhe.org/) (primary FHE library), Python, FastAPI, Docker Compose, GitHub Actions CI
+
+### Current Scope and Limitations
+
+- Prototype demonstrates one statistical function: correlation
+- Dataset is small and synthetic
+- Performance is not the primary objective
+- Focus is on secure design and proof-of-concept integration
+
+### Future Work
+
+- Extend to additional statistical queries
+- Improve operational performance
+- Add support for multiple concurrent requests
+- Validate architecture against larger-scale research workflows
+
+### Team
+
+- **Michelle** (`MJ`)
+- **Lennart** (`L`)
+
+Lab: **Lab Medical Data Privacy by Paul Johannssen** — Universität Bonn, Institut für Informatik 4
+
+---
+
+## Lab 2 — Private Set Intersection
+
+### Goal of the Project
+
+The main goal is to develop a **secure way for hospitals to determine which of their patients were also treated by other hospitals** — without revealing any additional patient information. The system satisfies these constraints:
+
+- If outsiders gain access to the prepared patient records, they cannot derive any information about individual patients
+- Each hospital learns **only** which of its own patients were treated by the other hospitals — no additional patient details, and no information about the other hospitals' patients
+- The system is **efficient and scalable**
+- Computation and data storage can be **outsourced to a Cloud Provider** without revealing patient data to that provider
+- The system requires **no multi-party computation or shared secrets** between hospitals
+
+### Why Not FHE for Set Intersection?
+
+FHE is the right tool when you need to compute **non-trivial functions** (sums, products, correlations) on encrypted data. But PSI only asks a simpler question: *"are these two values the same?"* — a pure equality comparison.
+
+For equality testing, FHE is severe overkill. Computing an encrypted equality check in FHE requires evaluating a polynomial approximation of the indicator function, which:
+
+- Introduces high **multiplicative depth** and corresponding noise growth
+- Inflates computation time by **10³–10⁶×** compared to a plaintext check
+- Requires careful noise-budget management and potentially bootstrapping
+
+**Hashing is far more efficient.** Argon2 is used — chosen for its **memory-hardness** property, which resists brute-force and GPU attacks on the hashed patient identifiers. Two records represent the same patient if and only if their hashes are identical. No raw PII reaches the server, and the intersection is computed in near-linear time. The right privacy tool must be chosen based on the *type of computation* required, not defaulting to the most powerful (and most expensive) technique.
+
+### Architecture
+
+#### Dataflow Diagram
+
+White boxes are parties; blue boxes are data. An arrow from a party to data means the data originates from that party; an arrow from data to a party means that party receives/uses it. Double arrows indicate both.
+
+![PSI Dataflow Diagram](/images/projects/fhe-psi-Dataflow_diagram.jpg)
+
+#### Interaction: Add Dataset
+
+When a hospital wants to add a new dataset to the database so it can later be used to find intersections with other datasets:
+
+![Add Dataset Interaction](/images/projects/fhe-psi-Add_Dataset_Interaction.jpg)
+
+#### Interaction: Find Intersections
+
+The sequence of interactions when a hospital wants to find which of its patients appear in the existing database:
+
+![Find Intersection Interaction](/images/projects/fhe-psi-Find_Intersection_Interaction.jpg)
+
+### Architecture Components
+
+Three parties communicate through well-defined abstract gateway interfaces:
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.9rem'}}>
+  <thead>
+    <tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+      <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700}}>Component</th>
+      <th style={{padding:'8px 12px',textAlign:'left',fontWeight:700}}>Role</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px',fontWeight:600}}>Client (Hospital)</td>
+      <td style={{padding:'8px 12px'}}>Hashes patient records with Argon2; sends hashed data to server; requests intersection results</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'8px 12px',fontWeight:600}}>Server (Data Trust)</td>
+      <td style={{padding:'8px 12px'}}>Applies a second hash layer before storing; computes the boolean matching vector; orchestrates the PSI protocol</td>
+    </tr>
+    <tr>
+      <td style={{padding:'8px 12px',fontWeight:600}}>Cloud Provider (Database)</td>
+      <td style={{padding:'8px 12px'}}>Stores doubly-hashed records; never sees plaintext patient data</td>
+    </tr>
+  </tbody>
+</table>
+
+Gateways between Client↔Server and Server↔Cloud are defined as abstract interfaces with mock implementations for testing, enabling future replacement with real network transport.
+
+### Dataset Generator
+
+`Dataset_creator.py` produces synthetic patient records of configurable size (default 10,000) with realistic German names, birth dates, and sex via the Faker library — enabling reproducible testing without real patient data:
+
+```python
+dataset_size = 10000
+youngest_possible_age = 18
+oldest_possible_age = 100
+```
+
+**Stack:** Python, Argon2 (memory-hard hashing), abstract gateway architecture, Faker
+
+---
+
+## Institution
+
+**Universität Bonn, Institut für Informatik 4**  
+Lab: Medical Data Privacy — Paul Johannssen

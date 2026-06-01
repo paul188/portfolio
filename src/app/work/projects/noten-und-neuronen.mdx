@@ -1,0 +1,140 @@
+---
+title: "Noten und Neuronen"
+publishedAt: "2025-11-01"
+summary: "Real-time mobile web application for a live concert neuroscience study, orchestrating six interactive music experiments for up to 2,500 simultaneous smartphone users."
+images:
+  - "/images/projects/noten-neuronen-hero.jpg"
+  - "/images/projects/noten-neuronen-about.jpg"
+  - "/images/projects/noten-neuronen-concert.jpg"
+team:
+  - name: "Paul Johannssen"
+    role: "Software Lead"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: "https://github.com/paul188/Noten-und-Neuronen"
+---
+
+<div className="nun-banner">
+  <img src="/images/projects/noten-neuronen-logo-einzeilig.svg" alt="Noten und Neuronen" className="nun-logo" />
+</div>
+
+## Overview
+
+**Noten und Neuronen** is a science concert series exploring music's preventive effects against neurodegenerative diseases. Six concerts across Germany combine live orchestra performances with audience participation research — mobile MRI scans, memory tests, and real-time interactive experiments during the intermissions.
+
+As **Software Lead**, I designed and built the entire web platform from scratch: a high-concurrency, real-time application that runs on participants' own smartphones during a live concert, scaling reliably to **2,500 simultaneous users**.
+
+**Live website:** [notenundneuronen.de](https://notenundneuronen.de) · **Live app:** [noten-und-neuronen-dd60a.web.app](https://noten-und-neuronen-dd60a.web.app/)
+
+## The Challenge
+
+Building a real-time interactive platform for a live concert venue poses unique engineering constraints:
+
+- **Zero tolerance for downtime** — 2,500 people in a hall with their phones out, expecting instant response
+- **No warm-up time** — all users join within a few minutes, creating a massive cold-start spike
+- **Heterogeneous network** — crowded venue Wi-Fi with high packet loss and variable latency
+- **Mobile-first UX** — everything must work beautifully on any smartphone, one-handed, in a dark concert hall
+
+## Architecture
+
+The platform is built on **Vue 3 + Firebase** with aggressive code splitting so participants only download the sub-app relevant to their current phase:
+
+- **Firebase Firestore** — session state, onboarding, phase orchestration
+- **Firebase Realtime Database** — high-frequency writes for the Smartphone-Chor (600+ writes/s)
+- **Firebase Cloud Functions** (TypeScript) — session management, phase transitions
+- **Vite PWA** — service worker caching for offline resilience and sub-second load times
+- **Manual code chunks** — admin, each sub-app, and Firebase SDK in separate bundles
+
+## Interactive Experiments (Sub-Apps)
+
+<div className="nun-apps-grid">
+  <div className="nun-app-card" style={{borderColor: '#FBBF24'}}>
+    <span className="nun-app-dot" style={{background: '#FBBF24'}}></span>
+    <strong>Hitster</strong>
+    <p>Song timeline sorting game — participants place music tracks in chronological order on a shared timeline</p>
+  </div>
+  <div className="nun-app-card" style={{borderColor: '#FB923C'}}>
+    <span className="nun-app-dot" style={{background: '#FB923C'}}></span>
+    <strong>Ferreri</strong>
+    <p>Emotion rating and memory test — participants rate their emotional response to musical passages</p>
+  </div>
+  <div className="nun-app-card" style={{borderColor: '#34D399'}}>
+    <span className="nun-app-dot" style={{background: '#34D399'}}></span>
+    <strong>Smartphone-Chor</strong>
+    <p>The entire audience becomes an instrument — phones emit coordinated pitches, transforming the hall into a living choir</p>
+  </div>
+  <div className="nun-app-card" style={{borderColor: '#60A5FA'}}>
+    <span className="nun-app-dot" style={{background: '#60A5FA'}}></span>
+    <strong>Group Singing</strong>
+    <p>Coordinated group singing with real-time visual feedback on the concert hall's overhead screens</p>
+  </div>
+</div>
+
+## Admin Console
+
+The admin interface gives the research team full control over the event in real time. It is split into two tabs — **Einstellungen** (Settings) and **Ablauf** (Timeline) — and is designed to be operated by a single person during a live concert.
+
+<Row gap="16" fillWidth>
+  <Column fill gap="8">
+    <ClickableImage src="/images/projects/noten-neuronen-admin-settings.png" alt="Admin Settings panel" />
+    <Text variant="label-default-s" onBackground="neutral-weak">Admin Settings — configure the sub-app sequence and per-app parameters before the event</Text>
+  </Column>
+  <Column fill gap="8">
+    <ClickableImage src="/images/projects/noten-neuronen-admin-timeline.png" alt="Admin Timeline view" />
+    <Text variant="label-default-s" onBackground="neutral-weak">Admin Timeline — advance through phases with a single tap during the live concert</Text>
+  </Column>
+</Row>
+
+The **Settings** tab lets the research team define the event city, reorder sub-apps via drag-and-drop, and configure per-app parameters (song lists, image sets, pitch assignments) before the concert starts. The **Timeline** tab shows the full event sequence — Onboarding → Einführung → each sub-app → Finale — and allows the PI to advance the audience to the next phase with a single tap, triggering a real-time Firestore update that propagates to all 2,500 connected devices within milliseconds.
+
+## Public Orchestra Screen
+
+<Slideshow
+  images={[
+    "/images/projects/nun-public-1.png",
+    "/images/projects/nun-public-2.png",
+    "/images/projects/nun-public-3.png",
+    "/images/projects/nun-public-4.png",
+    "/images/projects/nun-public-5.png"
+  ]}
+  alts={[
+    "Public screen slide 1",
+    "Public screen slide 2",
+    "Public screen slide 3",
+    "Public screen slide 4",
+    "Public screen slide 5"
+  ]}
+  interval={3500}
+/>
+
+A separate fullscreen view ([/concert-screen](/)) is designed to be displayed on the large overhead screens in the concert hall. It shows the current phase, any countdown timers, and aggregated real-time results (e.g., live Hitster leaderboards, Ferreri emotion heatmaps) so the audience can follow along between the live music and the interactive experiments. The view is driven by the same Firestore session document as the participant phones — when the PI advances a phase on the admin tablet, the overhead screen transitions automatically.
+
+## User View
+
+<PhoneMockup />
+
+Participants join via a QR code displayed in the concert programme. The mobile experience is intentionally minimal: no login, no app download — just scan and go. The onboarding flow collects age, musical background, and consent in under two minutes. From there, the phone locks into the current phase automatically as the PI drives the timeline:
+
+- **Waiting screens** with animated branding appear between sub-apps, keeping participants engaged
+- **Sub-app UIs** are code-split per module so the Hitster game bundle never loads on a participant who only sees Ferreri
+- **Wake-lock** is held throughout to prevent phones from sleeping during experiments
+- **Offline resilience** via service worker means a brief Wi-Fi dropout does not drop the participant from the session
+
+## Scalability: 2,500 Concurrent Users
+
+Load-tested against all known Firebase limits before the first concert:
+
+- **Startup jitter** (0–5 s) prevents thundering-herd spikes on Firebase Auth
+- **Phase-transition jitter** (0–1 s) smooths Firestore listener storms
+- **Collier via Realtime Database** — 4× cheaper write rate than Firestore for high-frequency pitch data
+- **Lighthouse P95 < 2 s** on congested mobile networks
+
+## Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Frontend | Vue 3, Vue Router, Vite, PWA |
+| Backend | Firebase Firestore, Realtime Database, Cloud Functions |
+| Testing | Vitest (78 integration tests), load tests up to 2,500 users |
+| CI/CD | GitHub Actions, Firebase Hosting |
+| Languages | JavaScript, TypeScript |

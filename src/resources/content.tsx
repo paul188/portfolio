@@ -8,6 +8,7 @@ const person: Person = {
   avatar: "/images/avatar.jpg",
   email: "pauljoh@gmx.de",
   location: "Europe/Berlin",
+  displayLocation: "Europe/Bonn",
   languages: ["German", "English"],
 };
 
@@ -117,7 +118,7 @@ const about: About = {
         ],
         images: [
           {
-            src: "/images/projects/noten-neuronen-hero.jpg",
+            src: "/images/projects/noten-neuronen-about.jpg",
             alt: "Noten und Neuronen concert",
             width: 16,
             height: 9,

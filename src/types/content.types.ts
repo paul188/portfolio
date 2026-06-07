@@ -226,6 +226,12 @@ export interface Blog extends BasePageConfig {}
 export interface Work extends BasePageConfig {}
 
 /**
+ * Misc page configuration.
+ * @description Configuration for the Misc page (papers, preprints, open-source contributions).
+ */
+export interface Misc extends BasePageConfig {}
+
+/**
  * Gallery page configuration.
  * @description Configuration for the Gallery page, including metadata, navigation label, and image list.
  */

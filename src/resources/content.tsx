@@ -1,4 +1,4 @@
-import { About, Blog, Gallery, Home, Newsletter, Person, Social, Work } from "@/types";
+import { About, Blog, Gallery, Home, Misc, Newsletter, Person, Social, Work } from "@/types";
 
 const person: Person = {
   firstName: "Paul",
@@ -237,6 +237,13 @@ const work: Work = {
   description: `Engineering and research projects by ${person.name}`,
 };
 
+const misc: Misc = {
+  path: "/misc",
+  label: "Misc",
+  title: `Misc – ${person.name}`,
+  description: `Papers, preprints, and open-source contributions by ${person.name}`,
+};
+
 const gallery: Gallery = {
   path: "/gallery",
   label: "Gallery",
@@ -245,4 +252,4 @@ const gallery: Gallery = {
   images: [],
 };
 
-export { person, social, newsletter, home, about, blog, work, gallery };
+export { person, social, newsletter, home, about, blog, work, misc, gallery };

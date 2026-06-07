@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 
 import { Fade, Flex, Line, Row, ToggleButton } from "@once-ui-system/core";
 
-import { routes, display, person, about, blog, work, gallery } from "@/resources";
+import { routes, display, person, about, blog, work, misc, gallery } from "@/resources";
 import { ThemeToggle } from "./ThemeToggle";
 import styles from "./Header.module.scss";
 
@@ -124,6 +124,25 @@ export const Header = () => {
                       prefixIcon="grid"
                       href="/work"
                       selected={pathname.startsWith("/work")}
+                    />
+                  </Row>
+                </>
+              )}
+              {routes["/misc"] && (
+                <>
+                  <Row s={{ hide: true }}>
+                    <ToggleButton
+                      prefixIcon="document"
+                      href="/misc"
+                      label={misc.label}
+                      selected={pathname.startsWith("/misc")}
+                    />
+                  </Row>
+                  <Row hide s={{ hide: false }}>
+                    <ToggleButton
+                      prefixIcon="document"
+                      href="/misc"
+                      selected={pathname.startsWith("/misc")}
                     />
                   </Row>
                 </>

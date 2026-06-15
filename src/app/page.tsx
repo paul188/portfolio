@@ -100,8 +100,8 @@ export default function Home() {
           </RevealFx>
         </Column>
       </Column>
-      <RevealFx translateY="16" delay={0.6}>
-        <Projects range={[1, 1]} featured="neurodare" />
+      <RevealFx translateY="16" delay={0.6} fillWidth>
+        <Projects filterable featured="neurodare" />
       </RevealFx>
       {routes["/blog"] && (
         <Column fillWidth gap="24" marginBottom="l">
@@ -123,7 +123,6 @@ export default function Home() {
           </Row>
         </Column>
       )}
-      <Projects range={[2]} featured="neurodare" filterable />
       <Mailchimp />
     </Column>
   );

@@ -10,6 +10,10 @@ tags:
   - "Cybersecurity"
   - "Encryption"
   - "Research"
+categories:
+  - "Cybersecurity"
+  - "Math"
+  - "Medicine"
 team:
   - name: "Paul Johannssen"
     role: "Co-Lecturer"
@@ -32,7 +36,7 @@ Medical data is uniquely sensitive: hospitals must share patient data for resear
 
 ![FHE in neuroimaging: Researcher – DaRe (Data Trust) – Hospital sequence diagram](/images/projects/fhe-neuroimaging-diagram.png)
 
-The diagram shows the protocol used in a real neuroimaging data trust context:
+The diagram shows the protocol used in a real neuroimaging data trust context — modelled on [NeuroDaRe](/work/neurodare), the defense-in-depth healthcare data-trust platform I built:
 
 1. **Researcher** (Data User) sends a research query to **DaRe** (the Data Trust / Treuhaender)
 2. **Hospital** (Data Provider) sends MRI scan data alongside patient demographics — age, gender, birthdate — encrypted with its own key <InlineMath math="k" /> as <InlineMath math="\text{Enc}_k(\text{PHI})" />. Raw PHI never leaves the hospital.

@@ -5,6 +5,7 @@ import { BlockMath, InlineMath } from "@/components/Math";
 import ClickableImage from "@/components/ClickableImage";
 import PhoneMockup from "@/components/PhoneMockup";
 import Slideshow from "@/components/Slideshow";
+import { ObfuscatedEmail } from "@/components/ObfuscatedEmail";
 
 import {
   Heading,
@@ -205,7 +206,7 @@ export function CustomMDX(props: CustomMDXProps) {
     <MDXRemote
       options={{ blockJS: false }}
       {...props}
-      components={{ ...components, BlockMath, InlineMath, ClickableImage, PhoneMockup, Slideshow, ...(props.components || {}) }}
+      components={{ ...components, BlockMath, InlineMath, ClickableImage, PhoneMockup, Slideshow, ObfuscatedEmail, ...(props.components || {}) }}
     />
   );
 }

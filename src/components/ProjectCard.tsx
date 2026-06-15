@@ -27,7 +27,12 @@ const TAG_COLORS: Record<string, ColorScheme> = {
   "Cybersecurity":                  "danger",
   "Encryption":                     "danger",
   "Defensive Cybersecurity":        "danger",
+  "Threat Detection":               "danger",
+  "Offensive Security":             "danger",
+  "Access Control":                 "warning",
   "Vulnerability Assessment":       "warning",
+  "Reconnaissance":                 "warning",
+  "Security Automation":            "info",
   // Platform / infrastructure
   "Cloud Platform for medical data":"warning",
   // Research

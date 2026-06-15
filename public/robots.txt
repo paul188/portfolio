@@ -1,0 +1,15 @@
+User-agent: *
+Allow: /
+Disallow: /api/
+
+# Disallow known email harvester bots
+User-agent: EmailCollector
+Disallow: /
+User-agent: EmailSiphon
+Disallow: /
+User-agent: ExtractorPro
+Disallow: /
+User-agent: WebEmailExtractor
+Disallow: /
+
+Sitemap: https://pauljohannssen.dev/sitemap.xml

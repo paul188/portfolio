@@ -1,0 +1,327 @@
+---
+title: "Dangling-DNS Takeover Scanner"
+publishedAt: "2026-05-28"
+summary: "A continuous, asynchronous reconnaissance pipeline that hunts dangling DNS records across public bug-bounty programs — enumerating ~41,000 subdomains over 731 programs on four platforms, then classifying CNAME- and NS-based subdomain-takeover candidates. Its design follows the CCS '16 'dangling DNS' taxonomy, updated for which classes remain exploitable a decade later."
+images: []
+tags:
+  - "Offensive Security"
+  - "Reconnaissance"
+  - "Security Automation"
+categories:
+  - "Cybersecurity"
+  - "Software"
+team:
+  - name: "Paul Johannssen"
+    role: "Author — Security Research"
+    avatar: "/images/avatar.jpg"
+    linkedIn: "https://github.com/paul188"
+link: ""
+---
+
+## Overview
+
+This is an automated **subdomain-takeover scanner** for white-hat bug-bounty
+research. It continuously walks the public scope of programs on **HackerOne,
+Bugcrowd, Intigriti, and YesWeHack**, enumerates each domain's subdomains, and
+classifies which of them carry a **dangling DNS record** — a record that still
+points at a third-party resource the owner no longer controls, and which an
+attacker could therefore re-claim.
+
+The architecture follows the taxonomy and detection logic of the foundational
+academic paper on the subject — [*All Your DNS Records Point to Us: Understanding
+the Security Threats of Dangling DNS Records*](https://shhaos.github.io/papers/ccs16-dares.pdf)
+(Liu, Hao & Wang, **ACM CCS 2016**) — and adapts it to the bug-bounty setting,
+including the crucial update of *which* of the paper's record classes are still
+exploitable after a decade of cloud-provider mitigations.
+
+It is a respectful, rate-limited scanner: it only touches assets that are
+explicitly in-scope on public VDP programs, skips `.gov` and `.mil`, identifies
+itself with a contactable User-Agent, and performs **detection only** — the
+exploitation PoC is a separate, manually-invoked tool.
+
+<style>{`
+  .ddns-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1px;
+    background: var(--neutral-border-weak);
+    border: 1px solid var(--neutral-border-weak);
+    border-radius: 12px;
+    overflow: hidden;
+    margin: 24px 0;
+  }
+  @media (max-width: 640px) {
+    .ddns-stats { grid-template-columns: repeat(2, 1fr); }
+  }
+  .ddns-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px 16px;
+    background: var(--neutral-background-weak);
+    gap: 4px;
+    text-align: center;
+  }
+  .ddns-stat-num {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--neutral-on-background-strong);
+    letter-spacing: -0.02em;
+    line-height: 1;
+  }
+  .ddns-stat-label {
+    font-size: 11px;
+    color: var(--neutral-on-background-weak);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-weight: 500;
+  }
+`}</style>
+
+<div className="ddns-stats">
+  <div className="ddns-stat">
+    <span className="ddns-stat-num">731</span>
+    <span className="ddns-stat-label">Programs tracked</span>
+  </div>
+  <div className="ddns-stat">
+    <span className="ddns-stat-num">41,061</span>
+    <span className="ddns-stat-label">Subdomains analysed</span>
+  </div>
+  <div className="ddns-stat">
+    <span className="ddns-stat-num">4</span>
+    <span className="ddns-stat-label">Bounty platforms</span>
+  </div>
+  <div className="ddns-stat">
+    <span className="ddns-stat-num">70+</span>
+    <span className="ddns-stat-label">Services fingerprinted</span>
+  </div>
+</div>
+
+---
+
+## 1. Background: Dangling DNS Records (the DARE paper)
+
+The CCS '16 paper coined the term **"Dare"** (dangling DNS record) and is the
+reference taxonomy this scanner is built around. A Dare arises whenever a domain
+keeps a DNS record pointing to a resource it has stopped controlling — an
+abandoned cloud service, a released IP, or a deleted hosted zone. The paper
+classifies them by record type, and the scanner mirrors that classification:
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Dare class (paper)</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>How it dangles</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Scanner module</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Dangling CNAME</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Subdomain CNAMEs to a third-party service resource (S3 bucket, Beanstalk env, etc.) that has been released and can be re-registered</td>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>dns_analyzer.py + fingerprints.py</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Dangling NS</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>A zone is delegated to a cloud DNS provider's nameservers, but the hosted zone there was deleted — an attacker re-creates the zone to gain authority</td>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>ns_checker.py + claim_zone.py</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Dangling A</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>An A record points to a cloud IP that has been released back into the provider's pool and can be re-acquired</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Out of scope (see §6)</td>
+    </tr>
+  </tbody>
+</table>
+
+**What comes directly from the paper, and why:**
+- The **NS-delegation detector** is a faithful implementation of the paper's
+  dangling-NS attack: query the delegated nameservers *directly* for the zone's
+  `SOA`; a `SERVFAIL`/`NXDOMAIN` from the provider means the hosted zone no longer
+  exists, so the delegation is dangling.
+- The **CNAME-chain + service-fingerprint** path implements the paper's
+  dangling-CNAME class: resolve the full CNAME chain, then decide whether the
+  final target is an *unclaimed* third-party resource (e.g. an `NXDOMAIN` on a
+  service that requires the resource to exist, or a "no such bucket" signature).
+- The **zone-claim PoC** (`claim_zone.py`) realises the paper's exploitation
+  primitive for dangling NS — re-creating the hosted zone at the provider to
+  obtain authoritative control of the victim zone.
+
+---
+
+## 2. Threat Models
+
+The reason a dangling record matters is that controlling a victim's (sub)domain
+is far more dangerous than hosting look-alike content elsewhere. The paper
+enumerates the attack surface a successful takeover unlocks; the scanner exists to
+find these *before* an attacker does:
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Threat</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Why the takeover enables it</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Cookie theft / session hijacking</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Cookies scoped to the parent domain (`Domain=.victim.com`) are sent to *any* subdomain — an attacker-controlled subdomain harvests them</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Fraudulent TLS certificates</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Controlling the name satisfies CA domain-validation, so the attacker mints a valid certificate for the hijacked host</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Same-origin / trust abuse</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>CSP/CORS allowlists, OAuth redirect whitelists, and SSO trust that name the subdomain are turned against the victim</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Phishing on a trusted name</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Content served from the victim's own domain inherits its brand trust, TLS padlock, and email/SEO reputation</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Authoritative DNS control (NS class)</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>A dangling-NS takeover yields control of the *entire* zone — every record under it, not just one host</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## 3. Program & Scope Discovery
+
+Program lists are pulled from the community-maintained **bounty-targets-data**
+repository (refreshed every six hours), covering all four platforms with no API
+keys required. Each scope entry — wildcards (`*.example.com`), full URLs, or bare
+domains — is normalised to a plain apex domain; IPs, single-label names, and
+out-of-scope TLDs (`.gov`, `.mil`) are dropped. Programs are stored in SQLite and
+re-scanned on a rolling 24-hour cadence.
+
+---
+
+## 4. Subdomain Enumeration & Wildcard Filtering
+
+For each apex, subdomains are gathered from five passive sources — **crt.sh,
+Wayback Machine, AlienVault OTX, Anubis, and HackerTarget** — so no intrusive
+brute-forcing is needed. Before analysis, each apex is probed for **wildcard
+DNS**: two random non-existent subdomains are resolved, and if both return the
+same IP, that IP is recorded and used to suppress the false positives wildcard
+records would otherwise generate.
+
+---
+
+## 5. CNAME Takeover Detection
+
+Candidate subdomains run through a two-stage detector:
+
+1. **CNAME-chain resolution** — the chain is followed recursively (depth-limited),
+   distinguishing a live target, an `NXDOMAIN` endpoint, and a resolver error.
+2. **Service fingerprinting** — the final CNAME target is matched against **70+
+   service signatures** (S3, Elastic Beanstalk, Azure, Heroku, Shopify, Fastly,
+   Vercel, Netlify, …). Some services are only takeable when the endpoint returns
+   `NXDOMAIN`; the candidate logic encodes that per-service condition.
+
+Confirmation uses two complementary engines: **nuclei** with its `takeover`
+templates (filtered to high/critical), plus a **Python HTTP fallback** that checks
+body signatures for services that have no nuclei template. A state-transition
+guard suppresses re-alerts for already-known findings to keep the signal clean.
+
+---
+
+## 6. NS-Delegation Detection & the Zone-Claim PoC
+
+`ns_checker.py` implements the paper's dangling-NS attack as a detector. For every
+apex and every non-resolving subdomain it:
+
+1. Queries the `NS` records and checks whether they belong to a tracked cloud DNS
+   provider (Azure DNS, Google Cloud DNS, DigitalOcean, NS1, Hetzner).
+2. Resolves those nameservers and queries **each one directly** for the zone's
+   `SOA`.
+3. Declares the zone dangling only when **at least two** nameservers independently
+   return `SERVFAIL`/`NXDOMAIN` — a deliberately conservative rule to avoid
+   false positives from transient timeouts.
+
+The matching exploitation tool, `claim_zone.py`, demonstrates the takeover for
+authorised targets: it repeatedly creates a hosted zone at the provider until the
+randomly-assigned nameserver set matches the victim's delegation, then drops a
+signed `_bugbounty-poc` TXT record as proof — and is built to clean up every
+unmatched zone it creates.
+
+---
+
+## 7. Knowing What Not to Report
+
+The most important engineering decision in the project is **negative**: the paper's
+2016 taxonomy lists classes that cloud providers have since hardened, and blindly
+reporting them produces invalid, noisy submissions. Two whole classes are
+deliberately **excluded** from the detector:
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Excluded class</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Why it is no longer exploitable</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Route53 dangling NS</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>AWS added protections (2023) preventing NS reassignment for deleted hosted zones, so the zone-claim attack no longer executes; programs close these as informative</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontWeight:600}}>GitHub Pages CNAME</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Organisation-level custom-domain verification (a `_github-challenge` TXT record) blocks anyone else from claiming a verified domain, making the CNAME path non-exploitable in practice</td>
+    </tr>
+  </tbody>
+</table>
+
+This is the difference between a scanner that *measures* dangling records and one
+that surfaces *actionable* ones. Combined with the wildcard filter, the
+multi-resolver checks, and the conservative two-nameserver NS rule, the goal is a
+low-false-positive feed — reporting only what a triager can reproduce. (Dangling-A
+detection is likewise left out: re-acquiring a specific released cloud IP is rarely
+reliably exploitable and is poorly received by programs.)
+
+---
+
+## 8. Engineering & Operational Design
+
+- **Fully asynchronous** — `asyncio` + `aiohttp` with per-stage semaphores (DNS 50,
+  enumeration 15, HTTP 20, NS 10) so thousands of lookups run concurrently under a
+  global rate limit.
+- **Idempotent state** — every subdomain, DNS result, and finding is upserted into
+  SQLite; re-scans refresh rows rather than duplicating, and dead hosts are aged
+  out after repeated failures.
+- **Continuous & resumable** — a long-running loop refreshes programs every 6 h,
+  re-scans each every 24 h, and shuts down gracefully on `SIGINT`/`SIGTERM`.
+- **Respectful by construction** — four public resolvers, a contactable
+  User-Agent, in-scope assets only, and `.gov`/`.mil` skipped.
+
+---
+
+## Tech Stack
+
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Area</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Tools</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Core</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Python, asyncio, aiohttp, dnspython</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Detection</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>nuclei (takeover templates), custom service fingerprints, direct-NS SOA probing</td>
+    </tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Data</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>SQLite, bounty-targets-data feeds, passive sources (crt.sh, Wayback, OTX, Anubis, HackerTarget)</td>
+    </tr>
+    <tr>
+      <td style={{padding:'6px 10px',fontWeight:600}}>Exploitation PoC</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>boto3 / AWS Route53 (authorised targets only)</td>
+    </tr>
+  </tbody>
+</table>
+
+**Reference:** Daiping Liu, Shuai Hao, Haining Wang. *All Your DNS Records Point to
+Us: Understanding the Security Threats of Dangling DNS Records.* ACM CCS 2016 —
+[paper](https://shhaos.github.io/papers/ccs16-dares.pdf).

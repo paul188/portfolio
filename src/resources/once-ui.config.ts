@@ -189,7 +189,7 @@ const schema: SchemaConfig = {
   type: "Person",
   name: "Paul Johannssen",
   description: home.description,
-  email: "pauljoh@gmx.de",
+  email: "",
 };
 
 // social links

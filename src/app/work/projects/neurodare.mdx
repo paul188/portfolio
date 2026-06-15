@@ -1,13 +1,19 @@
 ---
 title: "NeuroDaRe: Healthcare Data Trust Platform"
 publishedAt: "2025-06-01"
-summary: "A full-stack healthcare data-trust platform enabling privacy-preserving sharing of radiological DICOM data between providers and researchers — with Keycloak OIDC, a 6-step pseudonymisation pipeline, and a 17-container Docker architecture."
+summary: "A full-stack healthcare data-trust platform for privacy-preserving exchange of radiological DICOM data, engineered defense-in-depth: Keycloak OIDC role-gating, PHI isolated across four databases, and a layered runtime security stack (CrowdSec, Falco/eBPF, ClamAV, WireGuard, Trivy, Semgrep) across 17 containers."
 images:
   - "/images/projects/neurodare-service-map.png"
 tags:
-  - "Cloud Platform for medical data"
   - "Defensive Cybersecurity"
+  - "Threat Detection"
+  - "Access Control"
   - "Vulnerability Assessment"
+  - "Cloud Platform for medical data"
+categories:
+  - "Cybersecurity"
+  - "Software"
+  - "Medicine"
 team:
   - name: "Paul Johannssen"
     role: "Software Lead"
@@ -20,7 +26,11 @@ link: "https://github.com/paul188/DaRe"
 
 NeuroDaRe (GesundheitsDAtentreuhand-REallabor) is a funded research prototype for a **Healthcare Data Trust** — an institutional intermediary that allows medical data providers and researchers to exchange sensitive radiological data without either party having unmediated access to the other's systems. Data providers upload DICOM studies; data users request access; the Data Trust validates, pseudonymises, and brokers the exchange under ethical and legal constraints.
 
-The platform is built around three interlocking concerns: **privacy** (DICOM pseudonymisation with an isolated PHI database), **security** (multi-layer runtime threat detection, antivirus scanning, VPN-gated administration), and **auditability** (centralised ELK logging, full Alembic migration history, Keycloak event webhooks). It runs as 17 Docker containers with a single `make up-build` entrypoint and is deployed at [neurodare.org](https://www.neurodare.org).
+The platform is built around three interlocking concerns: **security** (multi-layer runtime threat detection, antivirus scanning, VPN-gated login and administration), **privacy** (DICOM pseudonymisation with an isolated PHI database), and **auditability** (centralised ELK logging, full Alembic migration history, Keycloak event webhooks). The whole system is engineered **defense-in-depth** — every layer from the network edge to the kernel to the application is independently guarded, so that no single misconfiguration can open a full breach. For the same security reasons, access is deliberately closed: the platform is **not exposed to the public internet** and is reachable only by vetted, trusted medical partners over a WireGuard VPN. It runs as 17 Docker containers with a single `make up-build` entrypoint and is deployed at neurodare.org.
+
+> **Note:** Because the deployment is locked behind the VPN and limited to trusted medical partners, the live site is **not publicly accessible** — visiting neurodare.org from a normal browser will not work. To explore the system, see the source on [GitHub](https://github.com/paul188/DaRe) or read on below.
+
+**Defense-in-depth at a glance** — six independent layers, each handled by a dedicated tool: **network** (CrowdSec IP banning) → **kernel/runtime** (Falco eBPF syscall monitoring) → **application** (ClamAV upload scanning) → **access** (WireGuard VPN-gating both login and admin interfaces) → **supply chain** (Trivy CVE scanning) → **static analysis** (Semgrep). See [§6](#6-security-stack) for the full breakdown.
 
 <Button href="https://github.com/paul188/DaRe" target="_blank" variant="secondary" size="m" suffixIcon="arrowUpRight">
   View on GitHub
@@ -198,7 +208,7 @@ NeuroDaRe treats security as a layered concern: each tool operates at a differen
     <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
       <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>WireGuard VPN</td>
       <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Access control</td>
-      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>All admin interfaces (Keycloak admin console, Kibana, Orthanc) are only reachable via VPN tunnel</td>
+      <td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Both the login flow and all admin interfaces (Keycloak admin console, Kibana, Orthanc) are only reachable via VPN tunnel — the platform is not exposed to the public internet</td>
     </tr>
     <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}>
       <td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem'}}>Trivy</td>

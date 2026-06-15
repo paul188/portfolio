@@ -43,7 +43,7 @@ const home: Home = {
   featured: {
     display: true,
     title: <>Featured Project</>,
-    href: "/work/noten-und-neuronen",
+    href: "/work/neurodare",
   },
   subline: (
     <>

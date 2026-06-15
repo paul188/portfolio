@@ -1,13 +1,16 @@
 import { getPosts } from "@/utils/utils";
 import { Column } from "@once-ui-system/core";
 import { ProjectCard } from "@/components";
+import { ProjectsBrowser } from "@/components/work/ProjectsBrowser";
 
 interface ProjectsProps {
   range?: [number, number?];
   exclude?: string[];
+  featured?: string;
+  filterable?: boolean;
 }
 
-export function Projects({ range, exclude }: ProjectsProps) {
+export function Projects({ range, exclude, featured, filterable }: ProjectsProps) {
   let allProjects = getPosts(["src", "app", "work", "projects"]);
 
   // Exclude by slug (exact match)
@@ -19,24 +22,50 @@ export function Projects({ range, exclude }: ProjectsProps) {
     return new Date(b.metadata.publishedAt).getTime() - new Date(a.metadata.publishedAt).getTime();
   });
 
+  // Pin the featured project to the front so it leads regardless of date
+  if (featured) {
+    const featuredIndex = sortedProjects.findIndex((post) => post.slug === featured);
+    if (featuredIndex > 0) {
+      const [featuredPost] = sortedProjects.splice(featuredIndex, 1);
+      sortedProjects.unshift(featuredPost);
+    }
+  }
+
   const displayedProjects = range
     ? sortedProjects.slice(range[0] - 1, range[1] ?? sortedProjects.length)
     : sortedProjects;
 
+  const cards = displayedProjects.map((post) => ({
+    slug: post.slug,
+    href: `/work/${post.slug}`,
+    images: post.metadata.images,
+    title: post.metadata.title,
+    description: post.metadata.summary,
+    content: post.content,
+    avatars: post.metadata.team?.map((member) => ({ src: member.avatar })) || [],
+    link: post.metadata.link || "",
+    tags: post.metadata.tags || [],
+    categories: post.metadata.categories || [],
+  }));
+
+  if (filterable) {
+    return <ProjectsBrowser cards={cards} />;
+  }
+
   return (
     <Column fillWidth gap="xl" marginBottom="40" paddingX="l">
-      {displayedProjects.map((post, index) => (
+      {cards.map((card, index) => (
         <ProjectCard
           priority={index < 2}
-          key={post.slug}
-          href={`/work/${post.slug}`}
-          images={post.metadata.images}
-          title={post.metadata.title}
-          description={post.metadata.summary}
-          content={post.content}
-          avatars={post.metadata.team?.map((member) => ({ src: member.avatar })) || []}
-          link={post.metadata.link || ""}
-          tags={post.metadata.tags || []}
+          key={card.slug}
+          href={card.href}
+          images={card.images}
+          title={card.title}
+          description={card.description}
+          content={card.content}
+          avatars={card.avatars}
+          link={card.link}
+          tags={card.tags}
         />
       ))}
     </Column>

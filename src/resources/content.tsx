@@ -47,10 +47,10 @@ const home: Home = {
   },
   subline: (
     <>
-      I'm Paul — a PhD candidate at{" "}
-      <strong>University Hospital Bonn</strong> building cloud infrastructure
-      for complex neuroimaging datasets, and leading agile development of
-      real-time web apps that scale to thousands of simultaneous users.
+      I'm Paul, a PhD candidate at{" "}
+      <strong>University Hospital Bonn</strong>. I build cloud infrastructure
+      for complex neuroimaging datasets and lead development of real-time web
+      apps that scale to thousands of users at once.
     </>
   ),
 };
@@ -77,12 +77,12 @@ const about: About = {
     description: (
       <>
         PhD candidate at the Translational Neuroimaging Group, University
-        Hospital Bonn, with a Master's degree in Mathematics from the University
-        of Bonn. I design and operate cloud infrastructure for highly regulated
-        neuroradiological datasets, lead a team of freelance developers, and
-        build production systems that handle thousands of concurrent users. I
-        also co-lecture on advanced cryptography — including Fully Homomorphic
-        Encryption — in the university's cybersecurity faculty.
+        Hospital Bonn, with a Master's in Mathematics from the University of
+        Bonn. Most of my work is cloud infrastructure for highly regulated
+        neuroradiological data. I also lead a small team of freelance developers
+        and build production systems that thousands of people use at once. On
+        the side I co-lecture on applied cryptography, including Fully
+        Homomorphic Encryption, in the university's cybersecurity faculty.
       </>
     ),
   },
@@ -96,9 +96,9 @@ const about: About = {
         role: "PhD Candidate, Software Lead & Co-Lecturer",
         achievements: [
           <>
-            Designed, built, and deployed a fully functional secure cloud
-            infrastructure and data platform for complex, highly regulated
-            neuroradiological datasets using a microservices architecture.
+            Built and deployed a secure cloud infrastructure and data platform
+            for complex, highly regulated neuroradiological datasets, using a
+            microservices architecture.
           </>,
           <>
             Managed a team of two freelance developers; owned end-to-end
@@ -106,10 +106,10 @@ const about: About = {
             pipelines, and SQL database architecture.
           </>,
           <>
-            Led agile development of{" "}
-            <strong>Noten und Neuronen</strong> — a high-concurrency real-time
-            web app scaling to 2,500 simultaneous mobile users for a live
-            neuroscience concert series.
+            Led development of{" "}
+            <strong>Noten und Neuronen</strong>, a real-time web app that scaled
+            to 2,500 simultaneous mobile users for a live neuroscience concert
+            series.
           </>,
           <>
             Co-lectured on advanced cryptographic techniques (Fully Homomorphic

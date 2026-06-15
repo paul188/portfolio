@@ -1,7 +1,7 @@
 ---
 title: "Dangling-DNS Takeover Scanner"
 publishedAt: "2026-05-28"
-summary: "A continuous, asynchronous reconnaissance pipeline that hunts dangling DNS records across public bug-bounty programs — enumerating ~41,000 subdomains over 731 programs on four platforms, then classifying CNAME- and NS-based subdomain-takeover candidates. Its design follows the CCS '16 'dangling DNS' taxonomy, updated for which classes remain exploitable a decade later."
+summary: "An automated reconnaissance pipeline that finds dangling DNS records across public bug-bounty programs. It enumerates ~41,000 subdomains across 731 programs on four platforms, then classifies CNAME- and NS-based subdomain-takeover candidates. The design follows the CCS '16 dangling-DNS taxonomy, updated for which classes are still exploitable a decade later."
 images: []
 tags:
   - "Offensive Security"
@@ -20,24 +20,23 @@ link: ""
 
 ## Overview
 
-This is an automated **subdomain-takeover scanner** for white-hat bug-bounty
-research. It continuously walks the public scope of programs on **HackerOne,
-Bugcrowd, Intigriti, and YesWeHack**, enumerates each domain's subdomains, and
-classifies which of them carry a **dangling DNS record** — a record that still
-points at a third-party resource the owner no longer controls, and which an
-attacker could therefore re-claim.
+An automated subdomain-takeover scanner I run for white-hat bug-bounty research.
+It works through the public scope of programs on HackerOne, Bugcrowd, Intigriti
+and YesWeHack, enumerates their subdomains, and flags any that carry a dangling
+DNS record: a record still pointing at a third-party resource the owner has given
+up, which someone else can re-claim.
 
-The architecture follows the taxonomy and detection logic of the foundational
-academic paper on the subject — [*All Your DNS Records Point to Us: Understanding
-the Security Threats of Dangling DNS Records*](https://shhaos.github.io/papers/ccs16-dares.pdf)
-(Liu, Hao & Wang, **ACM CCS 2016**) — and adapts it to the bug-bounty setting,
-including the crucial update of *which* of the paper's record classes are still
-exploitable after a decade of cloud-provider mitigations.
+The detection logic comes from the paper that first characterised the problem,
+[*All Your DNS Records Point to Us*](https://shhaos.github.io/papers/ccs16-dares.pdf)
+(Liu, Hao & Wang, ACM CCS 2016). I took its taxonomy and adapted it to a
+bug-bounty workflow, then updated it for a question the paper predates: which of
+its record classes are still exploitable now that the big cloud providers have
+hardened against them.
 
-It is a respectful, rate-limited scanner: it only touches assets that are
-explicitly in-scope on public VDP programs, skips `.gov` and `.mil`, identifies
-itself with a contactable User-Agent, and performs **detection only** — the
-exploitation PoC is a separate, manually-invoked tool.
+The scanner is built to stay polite. It only looks at assets a program lists as
+in scope, skips `.gov` and `.mil`, sends a User-Agent that points back to me, and
+does detection only. The proof-of-concept that actually claims a zone is a
+separate tool, run by hand.
 
 <style>{`
   .ddns-stats {
@@ -102,11 +101,11 @@ exploitation PoC is a separate, manually-invoked tool.
 
 ## 1. Background: Dangling DNS Records (the DARE paper)
 
-The CCS '16 paper coined the term **"Dare"** (dangling DNS record) and is the
-reference taxonomy this scanner is built around. A Dare arises whenever a domain
-keeps a DNS record pointing to a resource it has stopped controlling — an
-abandoned cloud service, a released IP, or a deleted hosted zone. The paper
-classifies them by record type, and the scanner mirrors that classification:
+The paper coined the term *dangling DNS record* (shortened to *Dare*), and its
+taxonomy is what the scanner is organised around. A record dangles when a domain
+keeps pointing a DNS entry at a resource it no longer controls: an abandoned
+cloud service, a released IP, a deleted hosted zone. The paper sorts these by
+record type, and the scanner uses the same split.
 
 <table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
   <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
@@ -133,27 +132,27 @@ classifies them by record type, and the scanner mirrors that classification:
   </tbody>
 </table>
 
-**What comes directly from the paper, and why:**
-- The **NS-delegation detector** is a faithful implementation of the paper's
-  dangling-NS attack: query the delegated nameservers *directly* for the zone's
-  `SOA`; a `SERVFAIL`/`NXDOMAIN` from the provider means the hosted zone no longer
-  exists, so the delegation is dangling.
-- The **CNAME-chain + service-fingerprint** path implements the paper's
-  dangling-CNAME class: resolve the full CNAME chain, then decide whether the
-  final target is an *unclaimed* third-party resource (e.g. an `NXDOMAIN` on a
-  service that requires the resource to exist, or a "no such bucket" signature).
-- The **zone-claim PoC** (`claim_zone.py`) realises the paper's exploitation
-  primitive for dangling NS — re-creating the hosted zone at the provider to
-  obtain authoritative control of the victim zone.
+Which parts come straight from the paper:
+
+- The NS-delegation detector implements the paper's dangling-NS attack. It queries
+  the delegated nameservers directly for the zone's `SOA`; a `SERVFAIL` or
+  `NXDOMAIN` from the provider means the hosted zone is gone, so the delegation is
+  dangling.
+- The CNAME-chain and fingerprint path covers the dangling-CNAME class. It
+  resolves the full CNAME chain, then decides whether the final target is an
+  unclaimed third-party resource (an `NXDOMAIN` on a service that needs the
+  resource to exist, or a "no such bucket" type of signature).
+- The zone-claim PoC (`claim_zone.py`) is the paper's exploitation step in
+  practice: re-create the hosted zone at the provider and take authoritative
+  control of the victim zone.
 
 ---
 
 ## 2. Threat Models
 
-The reason a dangling record matters is that controlling a victim's (sub)domain
-is far more dangerous than hosting look-alike content elsewhere. The paper
-enumerates the attack surface a successful takeover unlocks; the scanner exists to
-find these *before* an attacker does:
+A dangling record matters because taking over a victim's own subdomain is worse
+than standing up a look-alike somewhere else. The paper lays out what a takeover
+gives an attacker; finding those cases first is the whole point of the scanner.
 
 <table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
   <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
@@ -188,71 +187,69 @@ find these *before* an attacker does:
 
 ## 3. Program & Scope Discovery
 
-Program lists are pulled from the community-maintained **bounty-targets-data**
-repository (refreshed every six hours), covering all four platforms with no API
-keys required. Each scope entry — wildcards (`*.example.com`), full URLs, or bare
-domains — is normalised to a plain apex domain; IPs, single-label names, and
-out-of-scope TLDs (`.gov`, `.mil`) are dropped. Programs are stored in SQLite and
-re-scanned on a rolling 24-hour cadence.
+Program lists come from the community-maintained bounty-targets-data repository,
+refreshed every six hours, which covers all four platforms without API keys. Each
+scope entry is normalised to a plain apex domain, whether it arrives as a wildcard
+(`*.example.com`), a full URL, or a bare domain. IPs, single-label names and
+out-of-scope TLDs like `.gov` and `.mil` are dropped. Programs live in SQLite and
+are re-scanned every 24 hours.
 
 ---
 
 ## 4. Subdomain Enumeration & Wildcard Filtering
 
-For each apex, subdomains are gathered from five passive sources — **crt.sh,
-Wayback Machine, AlienVault OTX, Anubis, and HackerTarget** — so no intrusive
-brute-forcing is needed. Before analysis, each apex is probed for **wildcard
-DNS**: two random non-existent subdomains are resolved, and if both return the
-same IP, that IP is recorded and used to suppress the false positives wildcard
-records would otherwise generate.
+Subdomains for each apex come from five passive sources (crt.sh, the Wayback
+Machine, AlienVault OTX, Anubis and HackerTarget), so there is no intrusive
+brute-forcing. Each apex is also checked for wildcard DNS first: the scanner
+resolves two random non-existent subdomains, and if both return the same IP it
+records that IP and uses it to filter out the false positives a wildcard would
+otherwise produce.
 
 ---
 
 ## 5. CNAME Takeover Detection
 
-Candidate subdomains run through a two-stage detector:
+Candidate subdomains go through two stages:
 
-1. **CNAME-chain resolution** — the chain is followed recursively (depth-limited),
-   distinguishing a live target, an `NXDOMAIN` endpoint, and a resolver error.
-2. **Service fingerprinting** — the final CNAME target is matched against **70+
-   service signatures** (S3, Elastic Beanstalk, Azure, Heroku, Shopify, Fastly,
-   Vercel, Netlify, …). Some services are only takeable when the endpoint returns
-   `NXDOMAIN`; the candidate logic encodes that per-service condition.
+1. CNAME-chain resolution. The chain is followed recursively up to a depth limit,
+   separating a live target, an `NXDOMAIN` endpoint, and a resolver error.
+2. Service fingerprinting. The final CNAME target is matched against 70+ service
+   signatures (S3, Elastic Beanstalk, Azure, Heroku, Shopify, Fastly, Vercel,
+   Netlify, and so on). Some services can only be taken over when the endpoint
+   returns `NXDOMAIN`, and the candidate logic encodes that per service.
 
-Confirmation uses two complementary engines: **nuclei** with its `takeover`
-templates (filtered to high/critical), plus a **Python HTTP fallback** that checks
-body signatures for services that have no nuclei template. A state-transition
-guard suppresses re-alerts for already-known findings to keep the signal clean.
+Confirmation runs two engines side by side: nuclei with its `takeover` templates
+(limited to high and critical), and a Python HTTP fallback that checks body
+signatures for the services nuclei has no template for. A state-transition guard
+suppresses repeat alerts for findings already seen, so the feed stays readable.
 
 ---
 
 ## 6. NS-Delegation Detection & the Zone-Claim PoC
 
-`ns_checker.py` implements the paper's dangling-NS attack as a detector. For every
-apex and every non-resolving subdomain it:
+`ns_checker.py` runs the dangling-NS check. For every apex, and every subdomain
+that does not resolve, it:
 
 1. Queries the `NS` records and checks whether they belong to a tracked cloud DNS
    provider (Azure DNS, Google Cloud DNS, DigitalOcean, NS1, Hetzner).
-2. Resolves those nameservers and queries **each one directly** for the zone's
-   `SOA`.
-3. Declares the zone dangling only when **at least two** nameservers independently
-   return `SERVFAIL`/`NXDOMAIN` — a deliberately conservative rule to avoid
-   false positives from transient timeouts.
+2. Resolves those nameservers and asks each one directly for the zone's `SOA`.
+3. Calls the zone dangling only when at least two nameservers independently return
+   `SERVFAIL` or `NXDOMAIN`. Requiring two keeps a transient timeout from being
+   mistaken for a deleted zone.
 
-The matching exploitation tool, `claim_zone.py`, demonstrates the takeover for
-authorised targets: it repeatedly creates a hosted zone at the provider until the
-randomly-assigned nameserver set matches the victim's delegation, then drops a
-signed `_bugbounty-poc` TXT record as proof — and is built to clean up every
-unmatched zone it creates.
+The companion tool, `claim_zone.py`, proves the takeover on authorised targets. It
+creates hosted zones at the provider until the randomly assigned nameserver set
+matches the victim's delegation, then writes a signed `_bugbounty-poc` TXT record
+as evidence. Any zone it creates that does not match is cleaned up.
 
 ---
 
 ## 7. Knowing What Not to Report
 
-The most important engineering decision in the project is **negative**: the paper's
-2016 taxonomy lists classes that cloud providers have since hardened, and blindly
-reporting them produces invalid, noisy submissions. Two whole classes are
-deliberately **excluded** from the detector:
+Some of the most useful work here was deciding what to leave out. Parts of the
+2016 taxonomy have since been hardened by the cloud providers, and reporting them
+anyway just generates invalid, noisy submissions. Two classes are excluded from
+the detector on purpose:
 
 <table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
   <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
@@ -271,27 +268,28 @@ deliberately **excluded** from the detector:
   </tbody>
 </table>
 
-This is the difference between a scanner that *measures* dangling records and one
-that surfaces *actionable* ones. Combined with the wildcard filter, the
-multi-resolver checks, and the conservative two-nameserver NS rule, the goal is a
-low-false-positive feed — reporting only what a triager can reproduce. (Dangling-A
-detection is likewise left out: re-acquiring a specific released cloud IP is rarely
-reliably exploitable and is poorly received by programs.)
+That distinction, between measuring dangling records and surfacing the ones worth
+reporting, is the point. The wildcard filter, the multiple resolvers and the
+two-nameserver rule all push the same way: keep the false-positive rate low enough
+that everything the scanner surfaces is something a triager can reproduce.
+Dangling-A detection is left out for the same reason, since re-acquiring one
+specific released cloud IP is rarely reliable and programs tend to reject it.
 
 ---
 
 ## 8. Engineering & Operational Design
 
-- **Fully asynchronous** — `asyncio` + `aiohttp` with per-stage semaphores (DNS 50,
-  enumeration 15, HTTP 20, NS 10) so thousands of lookups run concurrently under a
-  global rate limit.
-- **Idempotent state** — every subdomain, DNS result, and finding is upserted into
-  SQLite; re-scans refresh rows rather than duplicating, and dead hosts are aged
+- Asynchronous throughout: `asyncio` and `aiohttp` with per-stage semaphores
+  (DNS 50, enumeration 15, HTTP 20, NS 10), so thousands of lookups run at once
+  under a global rate limit.
+- Idempotent storage: every subdomain, DNS result and finding is upserted into
+  SQLite, so re-scans refresh rows instead of duplicating them, and dead hosts age
   out after repeated failures.
-- **Continuous & resumable** — a long-running loop refreshes programs every 6 h,
-  re-scans each every 24 h, and shuts down gracefully on `SIGINT`/`SIGTERM`.
-- **Respectful by construction** — four public resolvers, a contactable
-  User-Agent, in-scope assets only, and `.gov`/`.mil` skipped.
+- Continuous and resumable: a long-running loop refreshes the program list every
+  6 hours, re-scans each program every 24 hours, and shuts down cleanly on
+  `SIGINT`/`SIGTERM`.
+- Polite by default: four public resolvers, a contactable User-Agent, in-scope
+  assets only, `.gov` and `.mil` skipped.
 
 ---
 

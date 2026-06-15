@@ -406,7 +406,7 @@ UserQueryEntities(
 
 ### Stage 2 — RAG Resolution: Surface Forms → Canonical Codes
 
-**This is not standard RAG.** Most RAG systems retrieve text chunks for an LLM to paraphrase. This one resolves surface forms to canonical database keys — the string `autism_spectrum_disorder` that goes directly into a SQL `WHERE` clause. The LLM never touches the ontology vocabulary; it only sees pre-resolved codes. This is closer to **biomedical entity linking** than to generative RAG.
+This stage works differently from most RAG. A typical RAG system retrieves text chunks for the model to paraphrase; here the job is to resolve a surface form to a canonical database key, like the string `autism_spectrum_disorder` that goes straight into a SQL `WHERE` clause. The LLM never sees the ontology vocabulary, only the codes that have already been resolved. In practice it is closer to biomedical entity linking than to generative RAG.
 
 `RAG/retriever.py` runs a three-tier cascade:
 

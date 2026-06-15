@@ -1,7 +1,7 @@
 ---
 title: "NeuroDaRe: Healthcare Data Trust Platform"
 publishedAt: "2025-06-01"
-summary: "A full-stack healthcare data-trust platform for privacy-preserving exchange of radiological DICOM data, engineered defense-in-depth: Keycloak OIDC role-gating, PHI isolated across four databases, and a layered runtime security stack (CrowdSec, Falco/eBPF, ClamAV, WireGuard, Trivy, Semgrep) across 17 containers."
+summary: "A full-stack healthcare data-trust platform for privacy-preserving exchange of radiological DICOM data, built defence-in-depth: Keycloak OIDC role-gating, PHI isolated across four databases, and a layered runtime security stack (CrowdSec, Falco/eBPF, ClamAV, WireGuard, Trivy, Semgrep) across 17 containers."
 images:
   - "/images/projects/neurodare-service-map.png"
 tags:
@@ -24,13 +24,13 @@ link: "https://github.com/paul188/DaRe"
 
 ## Overview
 
-NeuroDaRe (GesundheitsDAtentreuhand-REallabor) is a funded research prototype for a **Healthcare Data Trust** — an institutional intermediary that allows medical data providers and researchers to exchange sensitive radiological data without either party having unmediated access to the other's systems. Data providers upload DICOM studies; data users request access; the Data Trust validates, pseudonymises, and brokers the exchange under ethical and legal constraints.
+NeuroDaRe (GesundheitsDAtentreuhand-REallabor) is a funded research prototype for a healthcare data trust: an institutional intermediary that lets medical data providers and researchers exchange sensitive radiological data without either side getting direct access to the other's systems. Providers upload DICOM studies, data users request access, and the trust validates and pseudonymises each study before brokering the exchange under the relevant ethical and legal constraints.
 
-The platform is built around three interlocking concerns: **security** (multi-layer runtime threat detection, antivirus scanning, VPN-gated login and administration), **privacy** (DICOM pseudonymisation with an isolated PHI database), and **auditability** (centralised ELK logging, full Alembic migration history, Keycloak event webhooks). The whole system is engineered **defense-in-depth** — every layer from the network edge to the kernel to the application is independently guarded, so that no single misconfiguration can open a full breach. For the same security reasons, access is deliberately closed: the platform is **not exposed to the public internet** and is reachable only by vetted, trusted medical partners over a WireGuard VPN. It runs as 17 Docker containers with a single `make up-build` entrypoint and is deployed at neurodare.org.
+The platform is organised around three concerns. Security comes first, through runtime threat detection, antivirus scanning on upload, and login and admin access kept behind a VPN. Privacy is handled by DICOM pseudonymisation against an isolated PHI database. Auditability comes from centralised ELK logging, a full Alembic migration history, and Keycloak event webhooks. The design is defence-in-depth: each layer from the network edge down to the kernel is guarded on its own, so a single misconfiguration cannot open the whole system. Access is closed on purpose. The site is not exposed to the public internet and is reachable only by vetted medical partners over a WireGuard VPN. It runs as 17 Docker containers behind a single `make up-build` entrypoint and is deployed at neurodare.org.
 
-> **Note:** Because the deployment is locked behind the VPN and limited to trusted medical partners, the live site is **not publicly accessible** — visiting neurodare.org from a normal browser will not work. To explore the system, see the source on [GitHub](https://github.com/paul188/DaRe) or read on below.
+> **Note:** the deployment sits behind the VPN and is limited to trusted medical partners, so the live site is not publicly reachable — opening neurodare.org in a normal browser will not work. The source is on [GitHub](https://github.com/paul188/DaRe), and the rest of this page walks through the system.
 
-**Defense-in-depth at a glance** — six independent layers, each handled by a dedicated tool: **network** (CrowdSec IP banning) → **kernel/runtime** (Falco eBPF syscall monitoring) → **application** (ClamAV upload scanning) → **access** (WireGuard VPN-gating both login and admin interfaces) → **supply chain** (Trivy CVE scanning) → **static analysis** (Semgrep). See [§6](#6-security-stack) for the full breakdown.
+The security layers stack up like this: CrowdSec bans hostile IPs at the network edge, Falco watches kernel syscalls with eBPF, ClamAV scans uploads at the application layer, WireGuard gates both login and admin access, Trivy scans images for known CVEs in CI, and Semgrep handles static analysis of the source. [Section 6](#6-security-stack) breaks each one down.
 
 <Button href="https://github.com/paul188/DaRe" target="_blank" variant="secondary" size="m" suffixIcon="arrowUpRight">
   View on GitHub
@@ -181,7 +181,7 @@ The PHI database is the architectural linchpin of the privacy model. A data brea
 
 ## 6. Security Stack
 
-NeuroDaRe treats security as a layered concern: each tool operates at a different level of the stack and no single misconfiguration can open a full breach.
+Each tool in the stack works at a different level, so a problem in any one of them is contained rather than fatal.
 
 <table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
   <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>

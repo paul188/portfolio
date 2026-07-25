@@ -68,6 +68,115 @@
   margin-bottom: 0.5rem;
 }
 
+/* ─── Concert stat strip ─── */
+
+.nun-stats-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.nun-stat {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1rem 1.25rem;
+  text-align: center;
+}
+
+.nun-stat-value {
+  display: block;
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.nun-stat-label {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+/* ─── Audience-evaluation panel (post-concert survey) ─── */
+
+.nun-eval-card {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  margin: 1.5rem 0;
+}
+
+.nun-eval-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin: 0 0 0.25rem;
+}
+
+.nun-eval-subtitle {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  margin: 0 0 1rem;
+}
+
+.nun-eval-row {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 7rem;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.3rem 0;
+}
+
+.nun-eval-label {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.85);
+  white-space: nowrap;
+}
+
+.nun-eval-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.nun-eval-bar {
+  background: #FE1EFA;
+  border-radius: 0 4px 4px 0;
+  height: 100%;
+}
+
+.nun-eval-value {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: right;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.nun-eval-footer {
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #222;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.nun-eval-footer strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+@media (max-width: 480px) {
+  .nun-eval-row {
+    grid-template-columns: 6rem 1fr 4.5rem;
+  }
+}
+
 /* ─── NNN keyframes (verbatim from Noten-und-Neuronen/src/style.css) ─── */
 
 @keyframes nun-anim-land {

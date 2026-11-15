@@ -22,6 +22,59 @@
     }
 }
 
+/* Same grid as the project pages: the text column starts at the left edge
+   of the site container, so the page title lines up with Projects and Misc.
+   The portrait and section links sit in the right-hand column. */
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, var(--prose-width)) minmax(0, 1fr);
+    gap: 4rem;
+    align-items: start;
+    width: 100%;
+}
+
+.main {
+    grid-column: 1;
+    grid-row: 1;
+    min-width: 0;
+}
+
+.aside {
+    grid-column: 2;
+    grid-row: 1;
+    position: sticky;
+    top: 6rem;
+}
+
+@media (max-width: breakpoints.$m) {
+    .layout {
+        grid-template-columns: minmax(0, 1fr);
+        gap: 1.5rem;
+    }
+
+    .main,
+    .aside {
+        grid-column: 1;
+        grid-row: auto;
+    }
+
+    .aside {
+        position: static;
+        align-items: flex-start;
+    }
+
+    /* no room beside the text: the section links would only push it down */
+    .aside nav {
+        display: none;
+    }
+}
+
+@media (max-width: breakpoints.$s) {
+    .aside {
+        align-items: center;
+    }
+}
+
 /* Work and education entries: content on the left, dates in a fixed-width
    right column joined by a vertical timeline line. The fixed width keeps the
    dates of both sections at the same horizontal position. */

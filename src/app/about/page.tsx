@@ -71,34 +71,19 @@ export default function About() {
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      <Row fillWidth s={{ direction: "column"}} horizontal="center">
+      <div className={styles.layout}>
         {about.avatar.display && (
-          <Column
-            className={styles.avatar}
-            top="104"
-            fitHeight
-            position="sticky"
-            s={{ position: "relative", style: { top: "auto" } }}
-            xs={{ style: { top: "auto" } }}
-            minWidth="160"
-            paddingX="l"
-            paddingBottom="xl"
-            gap="m"
-            flex={3}
-            horizontal="center"
-          >
+          <Column className={styles.aside} gap="m" horizontal="center">
             <Avatar src={person.avatar} size="xl" />
             {about.tableOfContent.display && (
               <TableOfContents structure={structure} about={about} />
             )}
           </Column>
         )}
-        <Column className={styles.blockAlign} flex={9} style={{ maxWidth: "var(--prose-width)" }}>
+        <Column className={styles.main}>
           <Column
             id={about.intro.title}
             fillWidth
-            minHeight="160"
-            vertical="center"
             marginBottom="32"
           >
             {about.calendar.display && (
@@ -337,7 +322,7 @@ export default function About() {
             </>
           )}
         </Column>
-      </Row>
+      </div>
     </Column>
   );
 }

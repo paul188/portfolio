@@ -1,20 +1,7 @@
-import {
-  Heading,
-  Text,
-  Button,
-  Avatar,
-  RevealFx,
-  Column,
-  Badge,
-  Row,
-  Schema,
-  Meta,
-  Line,
-} from "@once-ui-system/core";
-import { home, about, person, baseURL, routes } from "@/resources";
-import { Mailchimp } from "@/components";
+import Image from "next/image";
+import { Button, Column, Schema, Meta } from "@once-ui-system/core";
+import { home, about, person, social, baseURL } from "@/resources";
 import { Projects } from "@/components/work/Projects";
-import { Posts } from "@/components/blog/Posts";
 
 export async function generateMetadata() {
   return Meta.generate({
@@ -27,8 +14,10 @@ export async function generateMetadata() {
 }
 
 export default function Home() {
+  const github = social.find((item) => item.name === "GitHub");
+
   return (
-    <Column maxWidth="m" gap="xl" paddingY="12" horizontal="center">
+    <Column className="site-container" gap="xl">
       <Schema
         as="webPage"
         baseURL={baseURL}
@@ -42,88 +31,34 @@ export default function Home() {
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      <Column fillWidth horizontal="center" gap="m">
-        <Column maxWidth="s" horizontal="center" align="center">
-          {home.featured.display && (
-            <RevealFx
-              fillWidth
-              horizontal="center"
-              paddingTop="16"
-              paddingBottom="32"
-              paddingLeft="12"
-            >
-              <Badge
-                background="brand-alpha-weak"
-                paddingX="12"
-                paddingY="4"
-                onBackground="neutral-strong"
-                textVariant="label-default-s"
-                arrow={false}
-                href={home.featured.href}
-              >
-                <Row paddingY="2">{home.featured.title}</Row>
-              </Badge>
-            </RevealFx>
-          )}
-          <RevealFx translateY="4" fillWidth horizontal="center" paddingBottom="16">
-            <Heading wrap="balance" variant="display-strong-l">
-              {home.headline}
-            </Heading>
-          </RevealFx>
-          <RevealFx translateY="8" delay={0.2} fillWidth horizontal="center" paddingBottom="32">
-            <Text wrap="balance" onBackground="neutral-weak" variant="heading-default-xl">
-              {home.subline}
-            </Text>
-          </RevealFx>
-          <RevealFx paddingTop="12" delay={0.4} horizontal="center" paddingLeft="12">
-            <Button
-              id="about"
-              data-border="rounded"
-              href={about.path}
-              variant="secondary"
-              size="m"
-              weight="default"
-              arrowIcon
-            >
-              <Row gap="8" vertical="center" paddingRight="4">
-                {about.avatar.display && (
-                  <Avatar
-                    marginRight="8"
-                    style={{ marginLeft: "-0.75rem" }}
-                    src={person.avatar}
-                    size="m"
-                  />
-                )}
-                {about.title}
-              </Row>
+      <section className="hero">
+        <Image
+          className="hero-avatar"
+          src={person.avatar}
+          alt={`Portrait of ${person.name}`}
+          width={176}
+          height={176}
+          priority
+        />
+        <div className="hero-text">
+          <h1 className="hero-title">{home.headline}</h1>
+          <p className="hero-lede">{home.subline}</p>
+          <div className="hero-actions">
+            <Button href={about.path} variant="primary" size="l" arrowIcon>
+              More about me
             </Button>
-          </RevealFx>
-        </Column>
-      </Column>
-      <RevealFx translateY="16" delay={0.6} fillWidth>
+            {github && (
+              <Button href={github.link} variant="secondary" size="l" prefixIcon={github.icon}>
+                GitHub
+              </Button>
+            )}
+          </div>
+        </div>
+      </section>
+      <Column as="section" fillWidth>
+        <h2 className="section-title">Projects</h2>
         <Projects filterable featured="neurodare" />
-      </RevealFx>
-      {routes["/blog"] && (
-        <Column fillWidth gap="24" marginBottom="l">
-          <Row fillWidth paddingRight="64">
-            <Line maxWidth={48} />
-          </Row>
-          <Row fillWidth gap="24" marginTop="40" s={{ direction: "column" }}>
-            <Row flex={1} paddingLeft="l" paddingTop="24">
-              <Heading as="h2" variant="display-strong-xs" wrap="balance">
-                Latest from the blog
-              </Heading>
-            </Row>
-            <Row flex={3} paddingX="20">
-              <Posts range={[1, 2]} columns="2" />
-            </Row>
-          </Row>
-          <Row fillWidth paddingLeft="64" horizontal="end">
-            <Line maxWidth={48} />
-          </Row>
-        </Column>
-      )}
-      <Mailchimp />
+      </Column>
     </Column>
   );
 }

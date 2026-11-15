@@ -1,7 +1,49 @@
 @use "./breakpoints.scss" as breakpoints;
 
+.footer {
+    width: 100%;
+    margin-top: var(--static-space-64);
+    border-top: 1px solid var(--neutral-alpha-weak);
+}
+
+.inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    width: 100%;
+    max-width: calc(var(--site-width) + 2 * var(--responsive-space-l));
+    margin: 0 auto;
+    padding: 1.25rem var(--responsive-space-l);
+}
+
+.text {
+    margin: 0;
+    font-size: 0.9375rem;
+    line-height: 1.5;
+    color: var(--neutral-on-background-strong);
+}
+
+.credit {
+    display: block;
+    font-size: 0.8125rem;
+    color: var(--neutral-on-background-weak);
+
+    a {
+        color: inherit;
+        text-decoration: underline;
+        text-underline-offset: 0.15em;
+    }
+}
+
+.social {
+    display: flex;
+    gap: 0.25rem;
+}
+
 @media (max-width: breakpoints.$s) {
-    .mobile {
-        text-align: center;
+    .inner {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

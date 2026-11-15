@@ -1,18 +1,19 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Column, Flex, SegmentedControl, Text } from "@once-ui-system/core";
 import { ProjectCard } from "@/components";
+import styles from "./Projects.module.scss";
+import { CATEGORY_KEYS } from "./categories";
 
 export interface ProjectCardData {
   slug: string;
   href: string;
   images: string[];
   title: string;
-  content: string;
   description: string;
-  avatars: { src: string }[];
+  hasCaseStudy: boolean;
   link: string;
+  website: string;
   tags: string[];
   categories: string[];
 }
@@ -22,7 +23,13 @@ const CATEGORY_ORDER = ["Software", "Cybersecurity", "Math", "Medicine"];
 
 const ALL = "all";
 
-export function ProjectsBrowser({ cards }: { cards: ProjectCardData[] }) {
+export function ProjectsBrowser({
+  cards,
+  filterable = false,
+}: {
+  cards: ProjectCardData[];
+  filterable?: boolean;
+}) {
   const [selected, setSelected] = useState(ALL);
 
   // Only show buttons for categories that actually appear on a project,
@@ -34,9 +41,7 @@ export function ProjectsBrowser({ cards }: { cards: ProjectCardData[] }) {
   }, [cards]);
 
   const visible =
-    selected === ALL
-      ? cards
-      : cards.filter((card) => card.categories?.includes(selected));
+    selected === ALL ? cards : cards.filter((card) => card.categories?.includes(selected));
 
   const buttons = [
     { value: ALL, label: "All" },
@@ -44,36 +49,45 @@ export function ProjectsBrowser({ cards }: { cards: ProjectCardData[] }) {
   ];
 
   return (
-    <Column fillWidth gap="l">
-      <Flex fillWidth horizontal="center" paddingX="l">
-        <SegmentedControl
-          buttons={buttons}
-          selected={selected}
-          onToggle={(value) => setSelected(value)}
-        />
-      </Flex>
-      {visible.length > 0 ? (
-        <Column fillWidth gap="xl" marginBottom="40" paddingX="l">
-          {visible.map((card, index) => (
-            <ProjectCard
-              key={card.slug}
-              priority={index < 2}
-              href={card.href}
-              images={card.images}
-              title={card.title}
-              content={card.content}
-              description={card.description}
-              avatars={card.avatars}
-              link={card.link}
-              tags={card.tags}
-            />
+    <div className={styles.browser}>
+      {filterable && (
+        <div className={styles.filters} role="group" aria-label="Filter projects by field">
+          {buttons.map((button) => (
+            <button
+              key={button.value}
+              type="button"
+              className={styles.chip}
+              data-category={CATEGORY_KEYS[button.value]}
+              aria-pressed={selected === button.value}
+              onClick={() => setSelected(button.value)}
+            >
+              {button.label}
+            </button>
           ))}
-        </Column>
-      ) : (
-        <Flex fillWidth horizontal="center" paddingY="xl">
-          <Text onBackground="neutral-weak">No projects in this category yet.</Text>
-        </Flex>
+        </div>
       )}
-    </Column>
+      {visible.length > 0 ? (
+        <ul className={styles.list}>
+          {visible.map((card, index) => (
+            <li key={card.slug}>
+              <ProjectCard
+                priority={index < 2}
+                href={card.href}
+                images={card.images}
+                title={card.title}
+                description={card.description}
+                hasCaseStudy={card.hasCaseStudy}
+                link={card.link}
+                website={card.website}
+                tags={card.tags}
+                categories={CATEGORY_ORDER.filter((cat) => card.categories?.includes(cat))}
+              />
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p className={styles.empty}>No projects in this category yet.</p>
+      )}
+    </div>
   );
 }

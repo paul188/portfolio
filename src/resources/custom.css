@@ -171,6 +171,26 @@
   font-weight: 600;
 }
 
+/* The card is dark; site.css's `.prose p` would paint its text dark too. */
+.prose .nun-eval-card p {
+  margin: 0;
+  font-size: inherit;
+  line-height: 1.5;
+  color: inherit;
+}
+
+.prose .nun-eval-card .nun-eval-title {
+  margin: 0 0 0.25rem;
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.prose .nun-eval-card .nun-eval-subtitle {
+  margin: 0 0 1rem;
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.55);
+}
+
 @media (max-width: 480px) {
   .nun-eval-row {
     grid-template-columns: 6rem 1fr 4.5rem;

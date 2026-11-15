@@ -1,28 +1,56 @@
-import { Column, Heading, Row, Text, Button, Meta, Schema } from "@once-ui-system/core";
+import Image from "next/image";
+import { Column, Text, Meta, Schema } from "@once-ui-system/core";
 import { baseURL, misc, person } from "@/resources";
 
-const papers = [
+type Entry = {
+  title: string;
+  link: string;
+  meta: string;
+  summary: string;
+  image?: { src: string; alt: string; width: number; height: number };
+};
+
+const awards: Entry[] = [
   {
-    title:
-      "MEmilio — A high performance Modular EpideMIcs simuLatIOn software for multi-scale and comparative simulations of infectious disease dynamics",
-    authors: "Julia Bicker, Carlotta Gerstein, David Kerkmann, ..., Paul Johannssen, et al.",
-    year: "2026",
-    link: "https://arxiv.org/abs/2602.11381",
+    title: "3rd place, Impact Pitch Night 2026",
+    link: "https://www.monenda.de",
+    meta: "Monenda, DIGITALHUB Bonn, 3 November 2026",
     summary:
-      "High-performance modular epidemic simulation framework unifying ODE, agent-based, and other epidemiological models in a shared C++ architecture with Python interface.",
+      "Third place out of 30 teams with Monenda. Monenda lets GP practices send personal heat warnings to their at-risk patients when an official heat warning is issued.",
+    image: {
+      src: "/images/award/trophy.svg",
+      alt: "Impact Pitch Night 2026 trophy engraved “3. Platz” (3rd place)",
+      width: 240,
+      height: 382,
+    },
   },
 ];
 
-const contributions = [
+const papers: Entry[] = [
   {
-    repo: "sjoerdk/idiscore",
-    pr: "Add ReplaceAndStore Operator",
-    prNumber: 155,
-    link: "https://github.com/sjoerdk/idiscore/pull/155",
-    merged: "Feb 2026",
+    title:
+      "MEmilio: a high performance Modular EpideMIcs simuLatIOn software for multi-scale and comparative simulations of infectious disease dynamics",
+    link: "https://doi.org/10.1038/s41598-026-66481-6",
+    meta: "J. Bicker, C. Gerstein, D. Kerkmann, …, P. Johannssen, …, M. J. Kühn. Scientific Reports 16, 26950 (2026)",
     summary:
-      "Added ReplaceAndStore operator and BijectiveDummyGenerator to make idiscore compatible with the NeuroDaRe input pipeline — enables reversible pseudonymization of DICOM field values by replacing them with generated dummies while storing the mapping.",
+      "An epidemic simulation framework that runs equation-based and agent-based models on one C++ core with a Python interface.",
   },
+];
+
+const contributions: Entry[] = [
+  {
+    title: "sjoerdk/idiscore #155: Add ReplaceAndStore operator",
+    link: "https://github.com/sjoerdk/idiscore/pull/155",
+    meta: "Merged February 2026",
+    summary:
+      "Reversible pseudonymisation for medical-imaging files: identifying fields are replaced with generated dummy values and the mapping is stored. Built for the NeuroDaRe upload pipeline.",
+  },
+];
+
+const sections = [
+  { title: "Awards", entries: awards },
+  { title: "Publications", entries: papers },
+  { title: "Open Source Contributions", entries: contributions },
 ];
 
 export async function generateMetadata() {
@@ -37,7 +65,7 @@ export async function generateMetadata() {
 
 export default function MiscPage() {
   return (
-    <Column maxWidth="m" paddingX="l" gap="xl" marginBottom="xl">
+    <Column className="site-container" gap="xl">
       <Schema
         as="webPage"
         baseURL={baseURL}
@@ -52,62 +80,50 @@ export default function MiscPage() {
         }}
       />
 
-      <Column fillWidth gap="m" paddingTop="xl">
-        <Heading variant="display-strong-xl">Misc</Heading>
-        <Text variant="body-default-l" onBackground="neutral-weak">
-          Papers, preprints, and open-source contributions.
-        </Text>
-      </Column>
+      <header>
+        <h1 className="page-title">{misc.label}</h1>
+        <p className="page-lede">Awards, publications, and open-source contributions.</p>
+      </header>
 
-      <Column fillWidth gap="l">
-        <Heading as="h2" variant="display-strong-s">
-          Papers &amp; Preprints
-        </Heading>
-        {papers.map((paper, index) => (
-          <Column key={index} fillWidth gap="8">
-            <Button
-              href={paper.link}
-              label={paper.title}
-              variant="tertiary"
-              size="m"
-              weight="strong"
-              style={{ textAlign: "left", justifyContent: "flex-start" }}
-            />
-            <Text variant="body-default-s" onBackground="neutral-weak">
-              {paper.authors} · {paper.year}
-            </Text>
-            <Text variant="body-default-m" onBackground="neutral-weak">
-              {paper.summary}
-            </Text>
-          </Column>
-        ))}
-      </Column>
-
-      <Column fillWidth gap="l">
-        <Heading as="h2" variant="display-strong-s">
-          Open Source Contributions
-        </Heading>
-        {contributions.map((contrib, index) => (
-          <Column key={index} fillWidth gap="8">
-            <Row gap="8" vertical="center" wrap>
-              <Text variant="heading-strong-l">{contrib.repo}</Text>
-              <Text variant="body-default-s" onBackground="neutral-weak">
-                · {contrib.merged}
+      {sections.map((section) => (
+        <Column
+          key={section.title}
+          as="section"
+          fillWidth
+          gap="m"
+          style={{ maxWidth: "var(--prose-width)" }}
+        >
+          <h2 className="section-title" style={{ marginBottom: 0 }}>
+            {section.title}
+          </h2>
+          {section.entries.map((entry) => (
+            <div key={entry.link} className="misc-entry">
+              {entry.image && (
+                <Image
+                  className="misc-entry-image"
+                  src={entry.image.src}
+                  alt={entry.image.alt}
+                  width={entry.image.width}
+                  height={entry.image.height}
+                />
+              )}
+              <Column fillWidth gap="4">
+              <Text as="h3" className="about-entry" variant="heading-strong-l">
+                <a className="text-link" href={entry.link} target="_blank" rel="noopener noreferrer">
+                  {entry.title}
+                </a>
               </Text>
-            </Row>
-            <Button
-              href={contrib.link}
-              label={`#${contrib.prNumber} — ${contrib.pr}`}
-              variant="tertiary"
-              size="s"
-              prefixIcon="github"
-            />
-            <Text variant="body-default-m" onBackground="neutral-weak">
-              {contrib.summary}
-            </Text>
-          </Column>
-        ))}
-      </Column>
+              <Text as="p" variant="body-default-m" onBackground="neutral-medium">
+                {entry.meta}
+              </Text>
+              <Text as="p" variant="body-default-m" onBackground="neutral-strong" style={{ lineHeight: 1.6 }}>
+                {entry.summary}
+              </Text>
+              </Column>
+            </div>
+          ))}
+        </Column>
+      ))}
     </Column>
   );
 }

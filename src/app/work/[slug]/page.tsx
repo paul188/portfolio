@@ -1,25 +1,13 @@
 import { notFound } from "next/navigation";
 import { getPosts } from "@/utils/utils";
-import {
-  Meta,
-  Schema,
-  AvatarGroup,
-  Button,
-  Column,
-  Flex,
-  Heading,
-  Media,
-  Text,
-  SmartLink,
-  Row,
-  Avatar,
-  Line,
-} from "@once-ui-system/core";
+import { Meta, Schema, Column, Media } from "@once-ui-system/core";
 import { baseURL, about, person, work } from "@/resources";
 import { formatDate } from "@/utils/formatDate";
+import Link from "next/link";
 import { ScrollToHash, CustomMDX } from "@/components";
+import { slugify } from "@/components/mdx";
+import styles from "./page.module.scss";
 import { Metadata } from "next";
-import { Projects } from "@/components/work/Projects";
 
 export async function generateStaticParams(): Promise<{ slug: string }[]> {
   const posts = getPosts(["src", "app", "work", "projects"]);
@@ -68,13 +56,16 @@ export default async function Project({
     notFound();
   }
 
-  const avatars =
-    post.metadata.team?.map((person) => ({
-      src: person.avatar,
-    })) || [];
+  // Second-level headings of the case study, for the "On this page" list.
+  const sections = post.content
+    .replace(/```[\s\S]*?```/g, "")
+    .split("\n")
+    .filter((line) => /^##\s+/.test(line))
+    .map((line) => line.replace(/^##\s+/, "").trim())
+    .map((title) => ({ title, id: slugify(title) }));
 
   return (
-    <Column as="section" maxWidth="m" horizontal="center" gap="l">
+    <Column className="site-container">
       <Schema
         as="blogPosting"
         baseURL={baseURL}
@@ -92,45 +83,64 @@ export default async function Project({
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      <Column maxWidth="s" gap="16" horizontal="center" align="center">
-        <SmartLink href="/work">
-          <Text variant="label-strong-m">Projects</Text>
-        </SmartLink>
-        <Text variant="body-default-xs" onBackground="neutral-weak" marginBottom="12">
-          {post.metadata.publishedAt && formatDate(post.metadata.publishedAt)}
-        </Text>
-        <Heading variant="display-strong-m">{post.metadata.title}</Heading>
-      </Column>
-      <Row marginBottom="32" horizontal="center">
-        <Row gap="16" vertical="center">
-          {post.metadata.team && <AvatarGroup reverse avatars={avatars} size="s" />}
-          <Text variant="label-default-m" onBackground="brand-weak">
-            {post.metadata.team?.map((member, idx) => (
-              <span key={idx}>
-                {idx > 0 && (
-                  <Text as="span" onBackground="neutral-weak">
-                    ,{" "}
-                  </Text>
+      <div className={styles.layout}>
+        <div className={styles.main}>
+          <header className={styles.header}>
+            <Link href="/work" className={styles.back}>
+              <span aria-hidden="true">←</span> All projects
+            </Link>
+            <h1 className="page-title">{post.metadata.title}</h1>
+            <p className={styles.meta}>
+              {post.metadata.team?.map((member) => `${member.name}, ${member.role}`).join("; ")}
+              {post.metadata.team && post.metadata.publishedAt && <span aria-hidden="true"> · </span>}
+              {post.metadata.publishedAt && (
+                <time dateTime={post.metadata.publishedAt}>
+                  {formatDate(post.metadata.publishedAt)}
+                </time>
+              )}
+            </p>
+            {(post.metadata.website || post.metadata.link) && (
+              <p className={styles.links}>
+                {post.metadata.website && (
+                  <a href={post.metadata.website} className={styles.link} target="_blank" rel="noopener noreferrer">
+                    Website <span aria-hidden="true">↗</span>
+                  </a>
                 )}
-                <SmartLink href={member.linkedIn}>{member.name}</SmartLink>
-              </span>
-            ))}
-          </Text>
-        </Row>
-      </Row>
-      {post.metadata.images.length > 0 && (
-        <Media priority radius="m" alt="image" src={post.metadata.images[0]} />
-      )}
-      <Column style={{ margin: "auto" }} as="article" maxWidth="s">
-        <CustomMDX source={post.content} />
-      </Column>
-      <Column fillWidth gap="40" horizontal="center" marginTop="40">
-        <Line maxWidth="40" />
-        <Heading as="h2" variant="heading-strong-xl" marginBottom="24">
-          Related projects
-        </Heading>
-        <Projects exclude={[post.slug]} range={[2]} />
-      </Column>
+                {post.metadata.link && (
+                  <a href={post.metadata.link} className={styles.link} target="_blank" rel="noopener noreferrer">
+                    Source code <span aria-hidden="true">↗</span>
+                  </a>
+                )}
+              </p>
+            )}
+          </header>
+          {post.metadata.images.length > 0 && (
+            <Media
+              priority
+              radius="m"
+              border="neutral-alpha-weak"
+              alt={post.metadata.title}
+              src={post.metadata.images[0]}
+              marginBottom="16"
+            />
+          )}
+          <article className="prose">
+            <CustomMDX source={post.content} />
+          </article>
+        </div>
+        {sections.length > 2 && (
+          <nav className={styles.toc} aria-label="On this page">
+            <p className={styles.tocTitle}>On this page</p>
+            <ul>
+              {sections.map((section) => (
+                <li key={section.id}>
+                  <a href={`#${section.id}`}>{section.title}</a>
+                </li>
+              ))}
+            </ul>
+          </nav>
+        )}
+      </div>
       <ScrollToHash />
     </Column>
   );

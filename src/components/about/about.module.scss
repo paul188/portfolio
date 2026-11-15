@@ -8,7 +8,126 @@
     }
 }
 
+.tocItem {
+    min-height: 2rem;
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    color: var(--neutral-on-background-medium);
+    text-align: left;
+
+    &:hover {
+        color: var(--neutral-on-background-strong);
+    }
+}
+
+/* Work and education entries: content on the left, dates in a fixed-width
+   right column joined by a vertical timeline line. The fixed width keeps the
+   dates of both sections at the same horizontal position. */
+.timeline {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 12rem;
+    grid-auto-flow: row dense;
+    column-gap: 1.5rem;
+    width: 100%;
+    margin-bottom: 2.5rem;
+}
+
+.timelineBody {
+    grid-column: 1;
+    padding-bottom: 2.5rem;
+    min-width: 0;
+}
+
+.timelineDate {
+    grid-column: 2;
+    position: relative;
+    padding: 0.2rem 0 0 1.5rem;
+    font-size: 0.95rem;
+    line-height: 1.4;
+    color: var(--neutral-on-background-medium);
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+
+    /* line from this entry's dot down to the next entry's dot */
+    &::before {
+        content: "";
+        position: absolute;
+        left: 5px;
+        top: 0.75rem;
+        height: 100%;
+        width: 2px;
+        background: var(--neutral-border-medium);
+    }
+}
+
+/* last entry: no line below its dot, no trailing space */
+.timeline > .timelineDate:nth-last-child(2)::before {
+    display: none;
+}
+
+.timeline > .timelineBody:last-child {
+    padding-bottom: 0;
+}
+
+.timelineDot {
+    position: absolute;
+    left: 0;
+    top: 0.45rem;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--neutral-on-background-medium);
+    background: var(--page-background);
+    z-index: 1;
+}
+
+.timeline > .timelineDate:first-child .timelineDot {
+    background: var(--neutral-on-background-medium);
+}
+
 @media (max-width: breakpoints.$s) {
+    /* phone: one column, date above each entry, line on the left */
+    .timeline {
+        grid-template-columns: minmax(0, 1fr);
+        grid-auto-flow: row;
+    }
+
+    .timelineBody,
+    .timelineDate {
+        grid-column: 1;
+    }
+
+    .timelineDate {
+        padding-top: 0;
+        padding-bottom: 0.35rem;
+    }
+
+    .timelineBody {
+        position: relative;
+        padding-left: 1.5rem;
+
+        &::before {
+            content: "";
+            position: absolute;
+            left: 5px;
+            top: 0;
+            height: 100%;
+            width: 2px;
+            background: var(--neutral-border-medium);
+        }
+    }
+
+    .timeline > .timelineDate:nth-last-child(2)::before,
+    .timeline > .timelineBody:last-child::before {
+        display: none;
+    }
+
+    .timelineDot {
+        top: 0.25rem;
+    }
+
     .textAlign {
         text-align: center;
     }

@@ -1,0 +1,284 @@
+/* Site-wide layout and typography.
+   Light theme only. One type family, a wide container for navigation and
+   project lists, and a narrow measure (about 70-80 characters) for prose. */
+
+:root {
+  color-scheme: only light;
+  --site-width: 68rem;
+  --prose-width: 52rem;
+
+  /* Category colours: text colour and a light tint of it. Used by the
+     project filter tabs and the topic tags on project cards. */
+  --cat-software: #0e7490;
+  --cat-software-tint: #e8f6f9;
+  --cat-cybersecurity: #b42318;
+  --cat-cybersecurity-tint: #fdeeec;
+  --cat-math: #6d28d9;
+  --cat-math-tint: #f3eefe;
+  --cat-medicine: #15803d;
+  --cat-medicine-tint: #e9f6ee;
+}
+
+[data-category="software"] { --cat: var(--cat-software); --cat-tint: var(--cat-software-tint); }
+[data-category="cybersecurity"] { --cat: var(--cat-cybersecurity); --cat-tint: var(--cat-cybersecurity-tint); }
+[data-category="math"] { --cat: var(--cat-math); --cat-tint: var(--cat-math-tint); }
+[data-category="medicine"] { --cat: var(--cat-medicine); --cat-tint: var(--cat-medicine-tint); }
+
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 5rem;
+}
+
+h1, h2, h3, h4 {
+  text-wrap: balance;
+}
+
+/* MDX paragraphs render as block-level spans: the articles nest them inside
+   hand-written <p> tags and put images inside them, and a span is valid HTML
+   in both places. */
+.prose-p {
+  display: block;
+}
+
+p, li, .prose-p {
+  text-wrap: pretty;
+}
+
+.site-container {
+  width: 100%;
+  max-width: var(--site-width);
+}
+
+/* ─── Page titles and section headings ─── */
+
+.page-title {
+  margin: 0;
+  font-family: var(--font-heading);
+  font-size: clamp(2.25rem, 1.5rem + 2.6vw, 3.25rem);
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.025em;
+  color: var(--neutral-on-background-strong);
+}
+
+.page-lede {
+  margin: 1rem 0 0;
+  max-width: 40rem;
+  font-size: 1.25rem;
+  line-height: 1.5;
+  color: var(--neutral-on-background-medium);
+}
+
+.section-title {
+  margin: 0 0 1.25rem;
+  font-family: var(--font-heading);
+  font-size: 1.75rem;
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+  color: var(--neutral-on-background-strong);
+}
+
+/* ─── About page: section headings (Work Experience, Education, …) sit under
+       a rule and are clearly larger than the entries inside them. ─── */
+
+h2.about-section {
+  margin-top: 1rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--neutral-alpha-medium);
+  font-size: 1.75rem;
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+h3.about-entry {
+  font-size: 1.125rem !important;
+  font-weight: 600;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+
+/* ─── Misc page: an entry with an optional small image to its left ─── */
+
+.misc-entry {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.misc-entry-image {
+  flex: none;
+  width: 4.5rem;
+  height: auto;
+}
+
+/* ─── Home hero ─── */
+
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.5rem;
+  width: 100%;
+  padding: 1.5rem 0 1rem;
+}
+
+.hero-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.hero-avatar {
+  flex: none;
+  width: 6rem;
+  height: 6rem;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+@media (min-width: 48rem) {
+  .hero {
+    flex-direction: row-reverse;
+    align-items: center;
+    gap: 3rem;
+  }
+
+  .hero-avatar {
+    width: 11rem;
+    height: 11rem;
+  }
+}
+
+.hero-title {
+  margin: 0;
+  max-width: 22em;
+  font-family: var(--font-heading);
+  font-size: clamp(2.25rem, 1.25rem + 3.2vw, 3.5rem);
+  font-weight: 700;
+  line-height: 1.08;
+  letter-spacing: -0.03em;
+  color: var(--neutral-on-background-strong);
+}
+
+.hero-lede {
+  margin: 1.5rem 0 0;
+  max-width: var(--prose-width);
+  font-size: clamp(1.125rem, 1rem + 0.5vw, 1.375rem);
+  line-height: 1.5;
+  color: var(--neutral-on-background-medium);
+}
+
+.hero-lede strong {
+  font-weight: 600;
+  color: var(--neutral-on-background-strong);
+}
+
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  margin-top: 2rem;
+}
+
+/* ─── Long-form text (case studies) ─── */
+
+.prose {
+  width: 100%;
+  max-width: var(--prose-width);
+  font-size: 1.0625rem;
+}
+
+.prose p,
+.prose .prose-p,
+.prose li {
+  font-size: 1.0625rem;
+  line-height: 1.65;
+  color: var(--neutral-on-background-strong);
+}
+
+/* Once UI colours every link blue through `a:not(.button)`; the selectors
+   below are written to outrank it. Links are black and underlined, and the
+   underline thickens on hover. */
+.prose a:not(.button),
+.prose a:not(.button):visited {
+  color: var(--neutral-on-background-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.prose :is(h1, h2, h3, h4, h5, h6) {
+  scroll-margin-top: 5rem;
+}
+
+a.text-link {
+  color: var(--neutral-on-background-strong);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+.prose a:not(.button):hover,
+a.text-link:hover {
+  text-decoration-thickness: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* ─── Wide content inside case studies stays inside the column on phones:
+       tables and display maths scroll sideways, long code wraps. ─── */
+
+.prose {
+  min-width: 0;
+  overflow-wrap: break-word;
+}
+
+.prose table {
+  display: block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.prose .katex-display {
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 0.25rem;
+}
+
+.prose code {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.prose pre code {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+.prose pre {
+  max-width: 100%;
+  overflow-x: auto;
+}
+
+.prose pre > * {
+  white-space: pre;
+  overflow-wrap: normal;
+}
+
+/* Inline code (Once UI renders it as an inline-flex span) may break across
+   lines, so a long path or URL cannot push the page wider than the screen. */
+.prose :is(p, .prose-p, li, td) span.display-inline-flex.px-4.py-1 {
+  display: inline;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}

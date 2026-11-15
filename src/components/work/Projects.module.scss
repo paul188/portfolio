@@ -1,17 +1,60 @@
-.hover {
-    transition: var(--transition-micro-medium);
+@use "../breakpoints.scss" as breakpoints;
+
+.browser {
+    width: 100%;
+}
+
+// Filters are selectable tags in the same shape and colours as the category
+// tags on the cards: outlined when idle, filled when selected. "All" is neutral.
+.filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.chip {
+    min-height: 2.75rem;
+    padding: 0 0.875rem;
+    border: 1px solid var(--cat, var(--neutral-border-strong));
+    border-radius: 0.375rem;
+    background: transparent;
+    font-family: var(--font-label);
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1;
+    color: var(--cat, var(--neutral-on-background-strong));
+    cursor: pointer;
+    transition: background-color 120ms ease, color 120ms ease, border-color 120ms ease;
 
     &:hover {
-        transform: translateX(var(--static-space-8));
+        background: var(--cat-tint, var(--neutral-alpha-weak));
+    }
 
-        .indicator {
-            transform: rotate(0);
-        }
+    &[aria-pressed="true"] {
+        border-color: var(--cat, var(--neutral-on-background-strong));
+        background: var(--cat, var(--neutral-on-background-strong));
+        font-weight: 600;
+        color: #fff;
     }
 }
 
-.indicator {
-    transform: rotate(-90deg);
-    left: -2rem;
-    transition: var(--transition-micro-medium);
+.list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    > li {
+        padding: 2.5rem 0;
+        border-bottom: 1px solid var(--neutral-alpha-weak);
+    }
+
+    > li:last-child {
+        border-bottom: 0;
+    }
+}
+
+.empty {
+    padding: 3rem 0;
+    color: var(--neutral-on-background-medium);
 }

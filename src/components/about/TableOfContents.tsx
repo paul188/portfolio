@@ -35,31 +35,21 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ structure, about }) =
   if (!about.tableOfContent.display) return null;
 
   return (
-    <Column
-      left="0"
-      style={{
-        top: "50%",
-        transform: "translateY(-50%)",
-        whiteSpace: "nowrap",
-      }}
-      position="fixed"
-      paddingLeft="24"
-      gap="32"
-      m={{ hide: true }}
-    >
+    <Column as="nav" aria-label="On this page" paddingTop="16" gap="16" s={{ hide: true }}>
       {structure
         .filter((section) => section.display)
         .map((section, sectionIndex) => (
           <Column key={sectionIndex} gap="12">
             <Flex
+              as="button"
               cursor="interactive"
-              className={styles.hover}
+              className={`${styles.hover} ${styles.tocItem}`}
               gap="8"
               vertical="center"
               onClick={() => scrollTo(section.title, 80)}
             >
               <Flex height="1" minWidth="16" background="neutral-strong"></Flex>
-              <Text>{section.title}</Text>
+              <Text variant="body-default-m">{section.title}</Text>
             </Flex>
             {about.tableOfContent.subItems && (
               <>

@@ -1,11 +1,10 @@
 import { getPosts } from "@/utils/utils";
-import { Column } from "@once-ui-system/core";
-import { ProjectCard } from "@/components";
 import { ProjectsBrowser } from "@/components/work/ProjectsBrowser";
 
 interface ProjectsProps {
   range?: [number, number?];
   exclude?: string[];
+  /** Slug of the project that leads the list regardless of date */
   featured?: string;
   filterable?: boolean;
 }
@@ -41,33 +40,12 @@ export function Projects({ range, exclude, featured, filterable }: ProjectsProps
     images: post.metadata.images,
     title: post.metadata.title,
     description: post.metadata.summary,
-    content: post.content,
-    avatars: post.metadata.team?.map((member) => ({ src: member.avatar })) || [],
+    hasCaseStudy: Boolean(post.content?.trim()),
     link: post.metadata.link || "",
+    website: post.metadata.website || "",
     tags: post.metadata.tags || [],
     categories: post.metadata.categories || [],
   }));
 
-  if (filterable) {
-    return <ProjectsBrowser cards={cards} />;
-  }
-
-  return (
-    <Column fillWidth gap="xl" marginBottom="40" paddingX="l">
-      {cards.map((card, index) => (
-        <ProjectCard
-          priority={index < 2}
-          key={card.slug}
-          href={card.href}
-          images={card.images}
-          title={card.title}
-          description={card.description}
-          content={card.content}
-          avatars={card.avatars}
-          link={card.link}
-          tags={card.tags}
-        />
-      ))}
-    </Column>
-  );
+  return <ProjectsBrowser cards={cards} filterable={filterable} />;
 }

@@ -70,7 +70,7 @@ function createImage({ alt, src }: MediaProps & { src: string }) {
   );
 }
 
-function slugify(str: string): string {
+export function slugify(str: string): string {
   const strWithAnd = str.replace(/&/g, " and "); // Replace & with 'and'
   return transliterate(strWithAnd, {
     lowercase: true,
@@ -85,7 +85,13 @@ function createHeading(as: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
   }: Omit<React.ComponentProps<typeof HeadingLink>, "as" | "id">) => {
     const slug = slugify(children as string);
     return (
-      <HeadingLink marginTop="24" marginBottom="12" as={as} id={slug} {...props}>
+      <HeadingLink
+        marginTop={as === "h1" || as === "h2" ? "48" : "32"}
+        marginBottom="12"
+        as={as}
+        id={slug}
+        {...props}
+      >
         {children}
       </HeadingLink>
     );
@@ -98,13 +104,7 @@ function createHeading(as: "h1" | "h2" | "h3" | "h4" | "h5" | "h6") {
 
 function createParagraph({ children }: TextProps) {
   return (
-    <Text
-      style={{ lineHeight: "175%" }}
-      variant="body-default-m"
-      onBackground="neutral-medium"
-      marginTop="8"
-      marginBottom="12"
-    >
+    <Text className="prose-p" variant="body-default-m" marginTop="8" marginBottom="16">
       {children}
     </Text>
   );
@@ -149,7 +149,7 @@ function createList(as: "ul" | "ol") {
 
 function createListItem({ children }: { children: ReactNode }) {
   return (
-    <ListItem marginTop="4" marginBottom="8" style={{ lineHeight: "175%" }}>
+    <ListItem marginTop="4" marginBottom="8">
       {children}
     </ListItem>
   );

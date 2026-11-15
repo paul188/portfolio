@@ -1,4 +1,4 @@
-import { Column, Heading, Meta, Schema } from "@once-ui-system/core";
+import { Column, Meta, Schema } from "@once-ui-system/core";
 import { baseURL, about, person, work } from "@/resources";
 import { Projects } from "@/components/work/Projects";
 
@@ -14,7 +14,7 @@ export async function generateMetadata() {
 
 export default function Work() {
   return (
-    <Column maxWidth="m" paddingTop="24">
+    <Column className="site-container">
       <Schema
         as="webPage"
         baseURL={baseURL}
@@ -28,9 +28,10 @@ export default function Work() {
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      <Heading marginBottom="l" variant="heading-strong-xl" align="center">
-        {work.title}
-      </Heading>
+      <h1 className="page-title">Projects</h1>
+      <p className="page-lede" style={{ marginBottom: "2rem" }}>
+        Research and engineering work in software, security, mathematics and medicine.
+      </p>
       <Projects filterable featured="neurodare" />
     </Column>
   );

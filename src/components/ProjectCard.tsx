@@ -1,137 +1,100 @@
-"use client";
-
-import {
-  AvatarGroup,
-  Carousel,
-  Column,
-  Flex,
-  Heading,
-  Row,
-  SmartLink,
-  Tag,
-  Text,
-} from "@once-ui-system/core";
-
-type ColorScheme = "neutral" | "brand" | "accent" | "info" | "danger" | "warning" | "success";
-
-const TAG_COLORS: Record<string, ColorScheme> = {
-  // Languages & algorithms
-  "C/C++":                          "accent",
-  "algorithmic":                    "accent",
-  "scientific computing":           "info",
-  // AI / data
-  "LLM":                            "brand",
-  "RAG":                            "brand",
-  "semistructured data":            "info",
-  // Security
-  "Cybersecurity":                  "danger",
-  "Encryption":                     "danger",
-  "Defensive Cybersecurity":        "danger",
-  "Threat Detection":               "danger",
-  "Offensive Security":             "danger",
-  "Access Control":                 "warning",
-  "Vulnerability Assessment":       "warning",
-  "Reconnaissance":                 "warning",
-  "Security Automation":            "info",
-  // Platform / infrastructure
-  "Cloud Platform for medical data":"warning",
-  // Research
-  "Research":                       "success",
-  // ML / CV
-  "Machine Learning":               "brand",
-  "Computer Vision":                "accent",
-  "Simulation":                     "info",
-  "Pytorch":                        "warning",
-};
-
-function tagColor(label: string): ColorScheme {
-  return TAG_COLORS[label] ?? "neutral";
-}
+import Image from "next/image";
+import Link from "next/link";
+import styles from "./ProjectCard.module.scss";
+import { CATEGORY_KEYS } from "./work/categories";
 
 interface ProjectCardProps {
   href: string;
   priority?: boolean;
   images: string[];
   title: string;
-  content: string;
   description: string;
-  avatars: { src: string }[];
+  hasCaseStudy: boolean;
   link: string;
   tags?: string[];
+  categories?: string[];
+  website?: string;
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
   href,
+  priority,
   images = [],
   title,
-  content,
   description,
-  avatars,
+  hasCaseStudy,
   link,
   tags = [],
+  categories = [],
+  website = "",
 }) => {
+  const image = images[0];
+  const topics = tags.filter((label) => !categories.includes(label));
+
   return (
-    <Column fillWidth gap="m">
-      <Carousel
-        sizes="(max-width: 960px) 100vw, 960px"
-        items={images.map((image) => ({
-          slide: image,
-          alt: title,
-        }))}
-      />
-      <Flex
-        s={{ direction: "column" }}
-        fillWidth
-        paddingX="s"
-        paddingTop="12"
-        paddingBottom="24"
-        gap="l"
-      >
-        {title && (
-          <Flex flex={5}>
-            <Heading as="h2" wrap="balance" variant="heading-strong-xl">
-              {title}
-            </Heading>
-          </Flex>
+    <article className={styles.card}>
+      <div className={styles.body}>
+        <h3 className={styles.title}>
+          {hasCaseStudy ? <Link href={href}>{title}</Link> : title}
+        </h3>
+        {description?.trim() && <p className={styles.summary}>{description}</p>}
+        {categories.length > 0 && (
+          <ul className={styles.tags} aria-label="Fields">
+            {categories.map((label) => (
+              <li key={`category-${label}`} data-category={CATEGORY_KEYS[label]}>
+                {label}
+              </li>
+            ))}
+          </ul>
         )}
-        {(avatars?.length > 0 || description?.trim() || content?.trim()) && (
-          <Column flex={7} gap="16">
-            {avatars?.length > 0 && <AvatarGroup avatars={avatars} size="m" reverse />}
-            {description?.trim() && (
-              <Text wrap="balance" variant="body-default-s" onBackground="neutral-weak">
-                {description}
-              </Text>
-            )}
-            {tags.length > 0 && (
-              <Row gap="8" wrap>
-                {tags.map((label) => (
-                  <Tag key={label} variant={tagColor(label)} size="s" label={label} />
-                ))}
-              </Row>
-            )}
-            <Flex gap="24" wrap>
-              {content?.trim() && (
-                <SmartLink
-                  suffixIcon="arrowRight"
-                  style={{ margin: "0", width: "fit-content" }}
-                  href={href}
-                >
-                  <Text variant="body-default-s">Read case study</Text>
-                </SmartLink>
-              )}
-              {link && (
-                <SmartLink
-                  suffixIcon="arrowUpRightFromSquare"
-                  style={{ margin: "0", width: "fit-content" }}
-                  href={link}
-                >
-                  <Text variant="body-default-s">View project</Text>
-                </SmartLink>
-              )}
-            </Flex>
-          </Column>
+        {topics.length > 0 && (
+          <ul className={styles.topics} aria-label="Topics">
+            {topics.map((label) => (
+              <li key={label}>{label}</li>
+            ))}
+          </ul>
         )}
-      </Flex>
-    </Column>
+        <div className={styles.links}>
+          {hasCaseStudy && (
+            <Link href={href} className={styles.link} aria-label={`View project: ${title}`}>
+              View project <span aria-hidden="true">→</span>
+            </Link>
+          )}
+          {website && (
+            <a
+              href={website}
+              className={styles.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Website for ${title} (opens in a new tab)`}
+            >
+              Website <span aria-hidden="true">↗</span>
+            </a>
+          )}
+          {link && (
+            <a
+              href={link}
+              className={styles.link}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`Source code for ${title} (opens in a new tab)`}
+            >
+              Source code <span aria-hidden="true">↗</span>
+            </a>
+          )}
+        </div>
+      </div>
+      {image && (
+        <Link href={href} className={styles.thumb} tabIndex={-1} aria-hidden="true">
+          <Image
+            src={image}
+            alt=""
+            fill
+            priority={priority}
+            sizes="(max-width: 768px) 100vw, 400px"
+          />
+        </Link>
+      )}
+    </article>
   );
 };

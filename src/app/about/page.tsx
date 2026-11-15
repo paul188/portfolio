@@ -28,6 +28,7 @@ export async function generateMetadata() {
 }
 
 export default function About() {
+  const hasLanguages = Boolean(person.languages && person.languages.length > 0);
   const structure = [
     {
       title: about.intro.title,
@@ -49,9 +50,14 @@ export default function About() {
       display: about.technical.display,
       items: about.technical.skills.map((skill) => skill.title),
     },
+    {
+      title: "Languages",
+      display: hasLanguages,
+      items: [],
+    },
   ];
   return (
-    <Column maxWidth="m">
+    <Column className="site-container">
       <Schema
         as="webPage"
         baseURL={baseURL}
@@ -65,23 +71,11 @@ export default function About() {
           image: `${baseURL}${person.avatar}`,
         }}
       />
-      {about.tableOfContent.display && (
-        <Column
-          left="0"
-          style={{ top: "50%", transform: "translateY(-50%)" }}
-          position="fixed"
-          paddingLeft="24"
-          gap="32"
-          s={{ hide: true }}
-        >
-          <TableOfContents structure={structure} about={about} />
-        </Column>
-      )}
       <Row fillWidth s={{ direction: "column"}} horizontal="center">
         {about.avatar.display && (
           <Column
             className={styles.avatar}
-            top="64"
+            top="104"
             fitHeight
             position="sticky"
             s={{ position: "relative", style: { top: "auto" } }}
@@ -94,22 +88,12 @@ export default function About() {
             horizontal="center"
           >
             <Avatar src={person.avatar} size="xl" />
-            <Row gap="8" vertical="center">
-              <Icon onBackground="accent-weak" name="globe" />
-              {person.displayLocation ?? person.location}
-            </Row>
-            {person.languages && person.languages.length > 0 && (
-              <Row wrap gap="8">
-                {person.languages.map((language, index) => (
-                  <Tag key={index} size="l">
-                    {language}
-                  </Tag>
-                ))}
-              </Row>
+            {about.tableOfContent.display && (
+              <TableOfContents structure={structure} about={about} />
             )}
           </Column>
         )}
-        <Column className={styles.blockAlign} flex={9} maxWidth={40}>
+        <Column className={styles.blockAlign} flex={9} style={{ maxWidth: "var(--prose-width)" }}>
           <Column
             id={about.intro.title}
             fillWidth
@@ -142,16 +126,10 @@ export default function About() {
                 />
               </Row>
             )}
-            <Heading className={styles.textAlign} variant="display-strong-xl">
-              {person.name}
-            </Heading>
-            <Text
-              className={styles.textAlign}
-              variant="display-default-xs"
-              onBackground="neutral-weak"
-            >
+            <h1 className={`page-title ${styles.textAlign}`}>{person.name}</h1>
+            <p className={`page-lede ${styles.textAlign}`} style={{ marginTop: "0.5rem" }}>
               {person.role}
-            </Text>
+            </p>
             {social.length > 0 && (
               <Row
                 className={styles.blockAlign}
@@ -197,28 +175,28 @@ export default function About() {
           </Column>
 
           {about.intro.display && (
-            <Column textVariant="body-default-l" fillWidth gap="m" marginBottom="xl">
+            <Column textVariant="body-default-l" fillWidth gap="m" marginBottom="xl" style={{ lineHeight: 1.6 }}>
               {about.intro.description}
             </Column>
           )}
 
           {about.work.display && (
             <>
-              <Heading as="h2" id={about.work.title} variant="display-strong-s" marginBottom="m">
+              <Heading as="h2" className="about-section" id={about.work.title} variant="display-strong-xs" marginBottom="m">
                 {about.work.title}
               </Heading>
-              <Column fillWidth gap="l" marginBottom="40">
+              <div className={styles.timeline}>
                 {about.work.experiences.map((experience, index) => (
-                  <Column key={`${experience.company}-${experience.role}-${index}`} fillWidth>
-                    <Row fillWidth horizontal="between" vertical="end" marginBottom="4">
-                      <Text id={experience.company} variant="heading-strong-l">
-                        {experience.company}
-                      </Text>
-                      <Text variant="heading-default-xs" onBackground="neutral-weak">
-                        {experience.timeframe}
-                      </Text>
-                    </Row>
-                    <Text variant="body-default-s" onBackground="brand-weak" marginBottom="m">
+                  <React.Fragment key={`${experience.company}-${experience.role}-${index}`}>
+                  <div className={styles.timelineDate}>
+                    <span className={styles.timelineDot} aria-hidden="true" />
+                    {experience.timeframe}
+                  </div>
+                  <Column className={styles.timelineBody} fillWidth>
+                    <Text as="h3" className="about-entry" id={experience.company} variant="heading-strong-l" marginBottom="4">
+                      {experience.company}
+                    </Text>
+                    <Text variant="body-default-m" onBackground="neutral-medium" marginBottom="m">
                       {experience.role}
                     </Text>
                     <Column as="ul" gap="16">
@@ -227,6 +205,7 @@ export default function About() {
                           <Text
                             as="li"
                             variant="body-default-m"
+                            style={{ lineHeight: 1.6 }}
                             key={`${experience.company}-${index}`}
                           >
                             {achievement}
@@ -237,47 +216,58 @@ export default function About() {
                     {experience.images && experience.images.length > 0 && (
                       <Row fillWidth paddingTop="m" paddingLeft="40" gap="12" wrap>
                         {experience.images.map((image, index) => (
-                          <Row
-                            key={index}
-                            border="neutral-medium"
-                            radius="m"
-                            minWidth={image.width}
-                            height={image.height}
-                          >
-                            <Media
-                              enlarge
+                          <Column key={index} gap="8">
+                            <Row
+                              border="neutral-medium"
                               radius="m"
-                              sizes={image.width.toString()}
-                              alt={image.alt}
-                              src={image.src}
-                            />
-                          </Row>
+                              minWidth={image.width}
+                              height={image.height}
+                            >
+                              <Media
+                                enlarge
+                                radius="m"
+                                sizes={image.width.toString()}
+                                alt={image.alt}
+                                src={image.src}
+                              />
+                            </Row>
+                            <Text variant="body-default-s" onBackground="neutral-medium">
+                              {image.alt}
+                            </Text>
+                          </Column>
                         ))}
                       </Row>
                     )}
                   </Column>
+                  </React.Fragment>
                 ))}
-              </Column>
+              </div>
             </>
           )}
 
           {about.studies.display && (
             <>
-              <Heading as="h2" id={about.studies.title} variant="display-strong-s" marginBottom="m">
+              <Heading as="h2" className="about-section" id={about.studies.title} variant="display-strong-xs" marginBottom="m">
                 {about.studies.title}
               </Heading>
-              <Column fillWidth gap="l" marginBottom="40">
+              <div className={styles.timeline}>
                 {about.studies.institutions.map((institution, index) => (
-                  <Column key={`${institution.name}-${index}`} fillWidth gap="4">
-                    <Text id={institution.name} variant="heading-strong-l">
+                  <React.Fragment key={`${institution.name}-${index}`}>
+                  <div className={styles.timelineDate}>
+                    <span className={styles.timelineDot} aria-hidden="true" />
+                    {institution.timeframe}
+                  </div>
+                  <Column className={styles.timelineBody} fillWidth gap="4">
+                    <Text as="h3" className="about-entry" id={institution.name} variant="heading-strong-l">
                       {institution.name}
                     </Text>
-                    <Text variant="heading-default-xs" onBackground="neutral-weak">
+                    <Text variant="body-default-m" onBackground="neutral-medium">
                       {institution.description}
                     </Text>
                   </Column>
+                  </React.Fragment>
                 ))}
-              </Column>
+              </div>
             </>
           )}
 
@@ -285,19 +275,20 @@ export default function About() {
             <>
               <Heading
                 as="h2"
+                className="about-section"
                 id={about.technical.title}
-                variant="display-strong-s"
-                marginBottom="40"
+                variant="display-strong-xs"
+                marginBottom="m"
               >
                 {about.technical.title}
               </Heading>
               <Column fillWidth gap="l">
                 {about.technical.skills.map((skill, index) => (
                   <Column key={`${skill}-${index}`} fillWidth gap="4">
-                    <Text id={skill.title} variant="heading-strong-l">
+                    <Text as="h3" className="about-entry" id={skill.title} variant="heading-strong-l">
                       {skill.title}
                     </Text>
-                    <Text variant="body-default-m" onBackground="neutral-weak">
+                    <Text variant="body-default-m" onBackground="neutral-medium" style={{ lineHeight: 1.6 }}>
                       {skill.description}
                     </Text>
                     {skill.tags && skill.tags.length > 0 && (
@@ -333,6 +324,16 @@ export default function About() {
                   </Column>
                 ))}
               </Column>
+            </>
+          )}
+          {hasLanguages && (
+            <>
+              <Heading as="h2" className="about-section" id="Languages" variant="display-strong-xs" marginTop="40" marginBottom="m">
+                Languages
+              </Heading>
+              <Text variant="body-default-m" onBackground="neutral-medium">
+                {person.languages?.join(", ")}
+              </Text>
             </>
           )}
         </Column>

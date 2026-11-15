@@ -20,7 +20,10 @@ type Metadata = {
   tags?: string[];
   categories?: string[];
   team: Team[];
+  /** Public source-code repository, shown as "Source code" */
   link?: string;
+  /** Project website, shown as "Website" */
+  website?: string;
 };
 
 import { notFound } from "next/navigation";
@@ -53,6 +56,7 @@ function readMDXFile(filePath: string) {
     categories: data.categories || [],
     team: data.team || [],
     link: data.link || "",
+    website: data.website || "",
   };
 
   return { metadata, content };

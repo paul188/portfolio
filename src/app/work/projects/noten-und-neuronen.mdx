@@ -1,21 +1,23 @@
 ---
 title: "Noten und Neuronen"
 publishedAt: "2025-11-01"
-summary: "Real-time mobile web application for a live concert neuroscience study — deployed before 2,500 visitors in the Kölner Philharmonie, with over 1,000 participants playing along on their own smartphones."
+summary: "Real-time web app for a neuroscience concert series: six concerts in five German cities in 2026, with up to 1,581 people playing along on their own smartphones in one evening."
 images:
-  - "/images/projects/noten-neuronen-philharmonie.jpg"
   - "/images/projects/noten-neuronen-app-closeup.jpg"
+  - "/images/projects/noten-neuronen-philharmonie.jpg"
   - "/images/projects/noten-neuronen-about.jpg"
 categories:
   - "Software"
   - "Medicine"
 team:
   - name: "Paul Johannssen"
-    role: "Software Lead"
+    role: "Software Team Lead"
     avatar: "/images/avatar.jpg"
     linkedIn: "https://github.com/paul188"
-link: "https://github.com/paul188/Noten-und-Neuronen"
+website: "https://notenundneuronen.de"
 ---
+
+<Text variant="label-default-s" onBackground="neutral-weak">One of 1,000+ screens: a participant sorting the Hitster song timeline (Photo: Angelika Huber)</Text>
 
 <div className="nun-banner">
   <img src="/images/projects/noten-neuronen-logo-einzeilig.svg" alt="Noten und Neuronen" className="nun-logo" />
@@ -23,15 +25,39 @@ link: "https://github.com/paul188/Noten-und-Neuronen"
 
 ## Overview
 
-**Noten und Neuronen** is a science concert series exploring music's preventive effects against neurodegenerative diseases. Concerts across Germany combine live orchestra performances with audience participation research — mobile MRI scans, memory tests, and real-time interactive experiments during the intermissions.
+**Noten und Neuronen** is a science concert series on music's preventive effects against neurodegenerative diseases. Concerts across Germany combine live orchestra performances with audience research: mobile MRI scans, memory tests, and real-time interactive experiments during the intermissions.
 
-As **Software Lead**, I designed and built the entire web platform from scratch: a high-concurrency, real-time application that runs on participants' own smartphones during a live concert, scaling reliably to **2,500 simultaneous users**.
+As **Software Team Lead**, I designed and built the web platform from scratch: a real-time application that runs on participants' own smartphones during a live concert and scales to **2,500 simultaneous users**.
 
-**Live website:** [notenundneuronen.de](https://notenundneuronen.de) · **Live app:** [noten-und-neuronen-dd60a.web.app](https://noten-und-neuronen-dd60a.web.app/)
+**Live app:** [noten-und-neuronen-dd60a.web.app](https://noten-und-neuronen-dd60a.web.app/)
 
-## The Concert: Kölner Philharmonie
+## Concerts
 
-In July 2026 the platform faced its audience: a sold-out Kölner Philharmonie with **2,500 visitors**, of whom **more than 1,000** joined the interactive experiments live on their own phones — sorting song timelines, rating musical passages, and turning the hall into a smartphone choir between the orchestra's pieces. The concert went off without a hitch: no downtime, no degraded phases, and the app kept pace with the live programme from onboarding to finale.
+The app has run live at four concerts of the 2026 series so far. "On the app" counts the phones that signed in during the concert; "Fun rating" is the audience's mean answer, from 1 to 5, to the post-concert question on how much fun the interactive experiments were.
+
+<div style={{overflowX:'auto'}}>
+<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
+  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Date</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Venue</th>
+    <th style={{padding:'6px 10px',textAlign:'left'}}>Performers</th>
+    <th style={{padding:'6px 10px',textAlign:'right'}}>On the app</th>
+    <th style={{padding:'6px 10px',textAlign:'right'}}>Fun rating</th>
+  </tr></thead>
+  <tbody>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px'}}>10 Jul 2026</td><td style={{padding:'6px 10px'}}>Kölner Philharmonie, Cologne (sold out)</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Bläck Fööss, Gürzenich-Orchester Köln</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>1,139</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>4.38 / 5</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px'}}>18 Oct 2026</td><td style={{padding:'6px 10px'}}>Telekom Forum, Bonn (sold out)</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Joris, UKB choir, UKB project orchestra</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>800+</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>4.62 / 5</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px'}}>4 Nov 2026</td><td style={{padding:'6px 10px'}}>Philharmonie Berlin</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Bodo Wartke, Deutsches Neuro-Orchester, Melanie Haupt, Noten&Neuronen-Band, SchönenGutenA-Band</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>1,581</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>4.45 / 5</td></tr>
+    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px'}}>8 Nov 2026</td><td style={{padding:'6px 10px'}}>Bergson Kunstkraftwerk, Munich</td><td style={{padding:'6px 10px',color:'var(--neutral-on-background-weak)'}}>Konstantin Krimmel, Magdalena Hoffmann, string quartet of BRSO members</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>709</td><td style={{padding:'6px 10px',textAlign:'right',whiteSpace:'nowrap'}}>4.33 / 5</td></tr>
+  </tbody>
+</table>
+</div>
+
+Two more concerts follow: Konzerthaus Dortmund on 19 November 2026, and the closing concert with Dirk Kaftan and the Beethoven Orchester Bonn at the Beethovenhalle Bonn on 11 December 2026.
+
+## The Premiere: Kölner Philharmonie
+
+In July 2026 the platform faced its first audience: a sold-out Kölner Philharmonie with **2,500 visitors**, of whom **1,139** joined the interactive experiments on their own phones. The app ran with no downtime and no degraded phases.
 
 <div className="nun-stats-row">
   <div className="nun-stat">
@@ -39,7 +65,7 @@ In July 2026 the platform faced its audience: a sold-out Kölner Philharmonie wi
     <span className="nun-stat-label">visitors in the hall</span>
   </div>
   <div className="nun-stat">
-    <span className="nun-stat-value">1,000+</span>
+    <span className="nun-stat-value">1,139</span>
     <span className="nun-stat-label">played along on the app</span>
   </div>
   <div className="nun-stat">
@@ -53,21 +79,16 @@ In July 2026 the platform faced its audience: a sold-out Kölner Philharmonie wi
     <ClickableImage src="/images/projects/noten-neuronen-philharmonie.jpg" alt="The Kölner Philharmonie during the concert, phone screens lighting up across the audience" />
     <Text variant="label-default-s" onBackground="neutral-weak">The full house playing along — phone screens lighting up across the Kölner Philharmonie</Text>
   </Column>
-  <Column fill gap="8">
-    <ClickableImage src="/images/projects/noten-neuronen-app-closeup.jpg" alt="A participant's phone running the app during the concert" />
-    <Text variant="label-default-s" onBackground="neutral-weak">One of 1,000+ screens: a participant sorting the Hitster song timeline (Photo: Angelika Huber)</Text>
-  </Column>
 </Row>
 
 ## Architecture
 
-The platform is built on **Vue 3 + Firebase** with aggressive code splitting so participants only download the sub-app relevant to their current phase:
+The platform is built on **Vue 3 + Firebase**. Code splitting means participants only download the sub-app for their current phase.
 
-- **Firebase Firestore** — session state, onboarding, phase orchestration
-- **Firebase Realtime Database** — high-frequency writes for the Smartphone-Chor (600+ writes/s)
-- **Firebase Cloud Functions** (TypeScript) — session management, phase transitions
-- **Vite PWA** — service worker caching for offline resilience and sub-second load times
-- **Manual code chunks** — admin, each sub-app, and Firebase SDK in separate bundles
+- **Firestore**: session state, onboarding, phase orchestration
+- **Realtime Database**: high-frequency writes for the Smartphone-Chor (600+ writes/s)
+- **Cloud Functions** (TypeScript): session management, phase transitions
+- **Vite PWA**: service worker caching for offline resilience and sub-second load times
 
 ## Interactive Experiments (Sub-Apps)
 
@@ -75,41 +96,41 @@ The platform is built on **Vue 3 + Firebase** with aggressive code splitting so 
   <div className="nun-app-card" style={{borderColor: '#FBBF24'}}>
     <span className="nun-app-dot" style={{background: '#FBBF24'}}></span>
     <strong>Hitster</strong>
-    <p>Song timeline sorting game — participants place music tracks in chronological order on a shared timeline</p>
+    <p>Participants place music tracks in chronological order on a shared timeline</p>
   </div>
   <div className="nun-app-card" style={{borderColor: '#FB923C'}}>
     <span className="nun-app-dot" style={{background: '#FB923C'}}></span>
     <strong>Ferreri</strong>
-    <p>Emotion rating and memory test — participants rate their emotional response to musical passages</p>
+    <p>Emotion rating and memory test: participants rate their emotional response to musical passages</p>
   </div>
   <div className="nun-app-card" style={{borderColor: '#34D399'}}>
     <span className="nun-app-dot" style={{background: '#34D399'}}></span>
     <strong>Smartphone-Chor</strong>
-    <p>The entire audience becomes an instrument — phones emit coordinated pitches, transforming the hall into a living choir</p>
+    <p>Phones emit coordinated pitches and the audience becomes a choir</p>
   </div>
   <div className="nun-app-card" style={{borderColor: '#60A5FA'}}>
     <span className="nun-app-dot" style={{background: '#60A5FA'}}></span>
     <strong>Group Singing</strong>
-    <p>Coordinated group singing with real-time visual feedback on the concert hall's overhead screens</p>
+    <p>Group singing with real-time visual feedback on the hall's overhead screens</p>
   </div>
 </div>
 
 ## Admin Console
 
-The admin interface gives the research team full control over the event in real time, designed to be operated by a single person during a live concert.
+A single person runs the whole event from the admin console.
 
 <Row gap="16" fillWidth>
   <Column fill gap="8">
     <ClickableImage src="/images/projects/noten-neuronen-admin-settings.png" alt="Admin Settings panel" />
-    <Text variant="label-default-s" onBackground="neutral-weak">Admin Settings — configure the sub-app sequence and per-app parameters before the event</Text>
+    <Text variant="label-default-s" onBackground="neutral-weak">Admin Settings: sub-app sequence and per-app parameters</Text>
   </Column>
   <Column fill gap="8">
     <ClickableImage src="/images/projects/noten-neuronen-admin-timeline.png" alt="Admin Timeline view" />
-    <Text variant="label-default-s" onBackground="neutral-weak">Admin Timeline — advance through phases with a single tap during the live concert</Text>
+    <Text variant="label-default-s" onBackground="neutral-weak">Admin Timeline: advance through phases with a single tap</Text>
   </Column>
 </Row>
 
-The **Settings** tab defines the event city, the sub-app order, and per-app parameters (song lists, image sets, pitch assignments). The **Timeline** tab lets the PI advance the audience through the event sequence with a single tap — a real-time Firestore update that propagates to all connected devices within milliseconds.
+The **Settings** tab defines the sub-app order and per-app parameters (song lists, image sets, pitch assignments). In the **Timeline** tab, one tap moves the whole audience to the next phase: a Firestore update that reaches all connected devices within milliseconds.
 
 ## Public Orchestra Screen
 
@@ -131,61 +152,28 @@ The **Settings** tab defines the event city, the sub-app order, and per-app para
   interval={3500}
 />
 
-A separate fullscreen view runs on the hall's large overhead screens, showing the current phase, countdowns, and aggregated live results (Hitster leaderboards, Ferreri emotion heatmaps). It is driven by the same Firestore session document as the participant phones, so it transitions in lockstep with the audience.
+A fullscreen view on the hall's overhead screens shows the current phase, countdowns and aggregated live results. It reads the same Firestore session document as the phones, so it changes in step with the audience.
 
 ## User View
 
 <PhoneMockup />
 
-Participants join via a QR code in the concert programme — no login, no app download, and onboarding (age, musical background, consent) takes under two minutes. From there, the phone locks into the current phase automatically as the PI drives the timeline, with animated waiting screens between sub-apps, a wake-lock to keep phones from sleeping, and service-worker offline resilience so a brief Wi-Fi dropout doesn't drop the participant from the session.
+Participants join via a QR code in the concert programme, with no login and no app download. Onboarding (age, musical background, consent) takes under two minutes. The phone then follows the current phase automatically. A wake-lock keeps it from sleeping, and the service worker carries the session through a brief Wi-Fi dropout.
 
 ## Evaluation and Takeaways
 
-The audience verdict was emphatically positive. In the post-concert survey, participants rated how much fun the interactive experiments were — **91% answered positively** (4 or 5 out of 5), with a mean of **4.39** and a median of **5**:
+At the end of each evening, the app's Finale sub-app asked participants how much fun the interactive experiments were, on a scale from 1 (Schlecht) to 5 (Super!). Across all four concerts, **1,175 participants** answered, with a mean of **4.45** and a median of **5**; **91% answered positively** (4 or 5).
 
-<div className="nun-eval-card">
-  <p className="nun-eval-title">Mitmachen — Spaß an den interaktiven Experimenten?</p>
-  <p className="nun-eval-subtitle">"Participation — how much fun were the interactive experiments?" · Post-concert audience survey</p>
-  <div className="nun-eval-row">
-    <span className="nun-eval-label">😀 5 Super!</span>
-    <div className="nun-eval-track"><div className="nun-eval-bar" style={{width: '52.2%'}}></div></div>
-    <span className="nun-eval-value">145 · 52.2%</span>
-  </div>
-  <div className="nun-eval-row">
-    <span className="nun-eval-label">🙂 4 Gut</span>
-    <div className="nun-eval-track"><div className="nun-eval-bar" style={{width: '38.8%'}}></div></div>
-    <span className="nun-eval-value">108 · 38.8%</span>
-  </div>
-  <div className="nun-eval-row">
-    <span className="nun-eval-label">😐 3 Na ja</span>
-    <div className="nun-eval-track"><div className="nun-eval-bar" style={{width: '5.8%'}}></div></div>
-    <span className="nun-eval-value">16 · 5.8%</span>
-  </div>
-  <div className="nun-eval-row">
-    <span className="nun-eval-label">🙁 2 Eher nicht</span>
-    <div className="nun-eval-track"><div className="nun-eval-bar" style={{width: '2.5%'}}></div></div>
-    <span className="nun-eval-value">7 · 2.5%</span>
-  </div>
-  <div className="nun-eval-row">
-    <span className="nun-eval-label">😢 1 Schlecht</span>
-    <div className="nun-eval-track"><div className="nun-eval-bar" style={{width: '0.7%'}}></div></div>
-    <span className="nun-eval-value">2 · 0.7%</span>
-  </div>
-  <div className="nun-eval-footer">
-    n = <strong>278</strong> · mean <strong>4.39</strong> · median <strong>5</strong> · SD 0.77 — positive (4–5): <strong>253 (91.0%)</strong> · neutral (3): 16 (5.8%) · negative (1–2): 9 (3.2%)
-  </div>
-</div>
-
-The biggest takeaway: the load-testing discipline paid off. The first full-scale deployment — over 1,000 real concurrent users on a congested venue network — behaved exactly as the simulations predicted, and the experiments produced clean research data for the study team.
+The load testing paid off: the first full-scale deployment, with over 1,000 real concurrent users on a congested venue network, behaved as the simulations predicted.
 
 ## Technical Challenges
 
-Building the entire platform from scratch on a short development timeline, against an immovable concert date, was the project's defining constraint. There was no soft launch: the first real test was 2,500 people in a hall. Two problems dominated the engineering work:
+The timeline was short and the concert date fixed. There was no soft launch: the first real test was 2,500 people in a hall. Two problems dominated the work:
 
-- **Limited bandwidth in the concert hall.** A venue network cannot serve fresh assets to over 1,000 phones at once, so the app had to stop needing it: **cache pre-warming** during onboarding fills the service-worker cache with everything later phases require, and **image data is preloaded** during the waiting screens before each sub-app — by the time a phase starts, the phones render from local cache instead of hitting the network.
-- **Thundering-herd spikes.** When everyone joins or transitions at the same moment, the backend sees one giant synchronized burst. Randomized **jitter** spreads it out: 0–5 s on startup to protect Firebase Auth, 0–1 s on phase transitions to smooth Firestore listener storms.
+- **Limited bandwidth in the concert hall.** A venue network cannot serve fresh assets to over 1,000 phones at once. **Cache pre-warming** during onboarding and **image preloading** during the waiting screens let the phones render each phase from local cache.
+- **Thundering-herd spikes.** Everyone joins or changes phase at the same moment. Randomized **jitter** spreads it out: 0–5 s on startup to protect Firebase Auth, 0–1 s on phase transitions to smooth Firestore listener storms.
 
-Beyond that, the Smartphone-Chor's high-frequency pitch data runs on the **Realtime Database** (a 4× cheaper write rate than Firestore), and the whole system was load-tested against all known Firebase limits before the concert — keeping **Lighthouse P95 under 2 s** on congested mobile networks.
+The Smartphone-Chor's pitch data runs on the **Realtime Database** (a 4× cheaper write rate than Firestore). I load-tested the system against all known Firebase limits before the concert and kept **Lighthouse P95 under 2 s** on congested mobile networks.
 
 ## Tech Stack
 

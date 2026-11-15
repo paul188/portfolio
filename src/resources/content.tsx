@@ -4,11 +4,10 @@ const person: Person = {
   firstName: "Paul",
   lastName: "Johannssen",
   name: `Paul Johannssen`,
-  role: "PhD Candidate · Software Lead",
+  role: "PhD Candidate · Software Engineer",
   avatar: "/images/avatar.jpg",
   email: "pauljoh@gmx.de",
   location: "Europe/Berlin",
-  displayLocation: "Europe/Bonn",
   languages: ["German", "English"],
 };
 
@@ -38,27 +37,30 @@ const home: Home = {
   image: "/images/og/home.jpg",
   label: "Home",
   title: `${person.name}'s Portfolio`,
-  description: `Portfolio of Paul Johannssen — PhD candidate, software lead, and full-stack engineer specialising in cloud infrastructure for regulated medical data.`,
-  headline: <>Engineering at the intersection of medicine, math, and software</>,
+  description: `Portfolio of Paul Johannssen — PhD candidate and full-stack engineer specialising in cloud infrastructure for regulated medical data.`,
+  headline: (
+    <>
+      I'm Paul, a PhD candidate at University Hospital Bonn.
+    </>
+  ),
   featured: {
-    display: true,
+    display: false,
     title: <>Featured Project</>,
     href: "/work/neurodare",
   },
   subline: (
     <>
-      I'm Paul, a PhD candidate at{" "}
-      <strong>University Hospital Bonn</strong>. I build cloud infrastructure
-      for complex neuroimaging datasets and lead development of real-time web
-      apps that scale to thousands of users at once.
+      I build cloud infrastructure for complex neuroimaging datasets and lead
+      development of real-time web apps that scale to thousands of users at
+      once.
     </>
   ),
 };
 
 const about: About = {
   path: "/about",
-  label: "About",
-  title: `About – ${person.name}`,
+  label: "About Me",
+  title: `About Me – ${person.name}`,
   description: `Meet ${person.name}, ${person.role} based in Bonn, Germany`,
   tableOfContent: {
     display: true,
@@ -77,12 +79,10 @@ const about: About = {
     description: (
       <>
         PhD candidate at the Translational Neuroimaging Group, University
-        Hospital Bonn, with a Master's in Mathematics from the University of
-        Bonn. Most of my work is cloud infrastructure for highly regulated
-        neuroradiological data. I also lead a small team of freelance developers
-        and build production systems that thousands of people use at once. On
-        the side I co-lecture on applied cryptography, including Fully
-        Homomorphic Encryption, in the university's cybersecurity faculty.
+        Hospital Bonn, with a Master's in Mathematics. I build cloud
+        infrastructure for highly regulated medical-imaging data and web apps
+        that thousands of people use at once. I also co-lecture on applied
+        cryptography.
       </>
     ),
   },
@@ -93,33 +93,35 @@ const about: About = {
       {
         company: "Translational Neuroimaging Group, University Hospital Bonn",
         timeframe: "Nov. 2025 – Present",
-        role: "PhD Candidate, Software Lead & Co-Lecturer",
+        role: "PhD Candidate & Co-Lecturer",
         achievements: [
           <>
-            Built and deployed a secure cloud infrastructure and data platform
-            for complex, highly regulated neuroradiological datasets, using a
-            microservices architecture.
+            Built and deployed a secure cloud data platform for highly
+            regulated neuroradiological datasets, using a microservices
+            architecture.
           </>,
           <>
-            Managed a team of two freelance developers; owned end-to-end
-            responsibility for full-stack development, DevOps, automated data
-            pipelines, and SQL database architecture.
+            Managed two freelance developers and owned full-stack development,
+            DevOps, data pipelines, and SQL database architecture.
+          </>,
+          <>
+            Co-lectured on Fully Homomorphic Encryption and Keyed Hash-Maps
+            for the cybersecurity faculty.
           </>,
           <>
             Led development of{" "}
-            <strong>Noten und Neuronen</strong>, a real-time web app that scaled
-            to 2,500 simultaneous mobile users for a live neuroscience concert
-            series.
-          </>,
-          <>
-            Co-lectured on advanced cryptographic techniques (Fully Homomorphic
-            Encryption, Keyed Hash-Maps) for the cybersecurity faculty.
+            <strong>Noten und Neuronen</strong> (
+            <a className="text-link" href="https://notenundneuronen.de" target="_blank" rel="noopener noreferrer">
+              notenundneuronen.de
+            </a>
+            ), a real-time web app that scaled to 2,500 simultaneous mobile
+            users for a live neuroscience concert series.
           </>,
         ],
         images: [
           {
             src: "/images/projects/noten-neuronen-about.jpg",
-            alt: "Noten und Neuronen concert",
+            alt: "Pianist and orchestra on stage at a Noten und Neuronen concert",
             width: 16,
             height: 9,
           },
@@ -131,12 +133,11 @@ const about: About = {
         role: "Working Student — Machine Learning Engineering",
         achievements: [
           <>
-            Developed and optimised ML surrogate models to simulate complex,
-            high-dimensional cellular interactions and tissue structures.
+            Developed ML surrogate models that simulate cellular interactions
+            and tissue structures.
           </>,
           <>
-            Implemented cutting-edge deep learning architectures including
-            generative diffusion models, U-Nets, and PointNets.
+            Implemented generative diffusion models, U-Nets, and PointNets.
           </>,
         ],
         images: [],
@@ -147,12 +148,12 @@ const about: About = {
         role: "Working Student — Data Engineering",
         achievements: [
           <>
-            Processed, cleaned, and analysed large-scale sensitive demographic
-            datasets within a professional engineering team.
+            Processed and analysed large, sensitive demographic datasets in an
+            engineering team.
           </>,
           <>
-            Maintained strict coding standards and enterprise CI/CD workflows
-            using Git, pull requests, rigorous code reviews, and GitHub Actions.
+            Worked with pull requests, code reviews, and CI/CD on GitHub
+            Actions.
           </>,
         ],
         images: [],
@@ -165,17 +166,14 @@ const about: About = {
     institutions: [
       {
         name: "Rheinische Friedrich-Wilhelms-Universität Bonn",
-        description: (
-          <>M.Sc. in Mathematics — Grade 1.3 (Oct. 2022 – Sep. 2025)</>
-        ),
+        timeframe: "Oct. 2022 – Sep. 2025",
+        description: <>M.Sc. in Mathematics — Grade 1.3</>,
       },
       {
         name: "Ludwig-Maximilians-Universität München",
+        timeframe: "Jan. 2019 – Jul. 2022",
         description: (
-          <>
-            B.Sc. in Mathematics — Grade 1.19; Minor in Theoretical Physics
-            (Jan. 2019 – Jul. 2022)
-          </>
+          <>B.Sc. in Mathematics — Grade 1.19; Minor in Theoretical Physics</>
         ),
       },
     ],
@@ -199,9 +197,8 @@ const about: About = {
         title: "Frontend & Real-time Systems",
         description: (
           <>
-            TypeScript, Vue 3, Firebase (Firestore, Realtime DB, Cloud
-            Functions), Vite — including systems scaled to 2,500 concurrent
-            users.
+            TypeScript, Vue 3, Vite, Firebase (Firestore, Realtime DB, Cloud
+            Functions).
           </>
         ),
         tags: [],
@@ -211,8 +208,7 @@ const about: About = {
         title: "Machine Learning & Mathematics",
         description: (
           <>
-            PyTorch, diffusion models, U-Nets, PointNets, surrogate learning.
-            Strong theoretical foundation in mathematics and numerical
+            PyTorch, diffusion models, U-Nets, PointNets, numerical
             optimisation (C++, Eigen3).
           </>
         ),
@@ -232,7 +228,7 @@ const blog: Blog = {
 
 const work: Work = {
   path: "/work",
-  label: "Work",
+  label: "Projects",
   title: `Projects – ${person.name}`,
   description: `Engineering and research projects by ${person.name}`,
 };
@@ -241,7 +237,7 @@ const misc: Misc = {
   path: "/misc",
   label: "Misc",
   title: `Misc – ${person.name}`,
-  description: `Papers, preprints, and open-source contributions by ${person.name}`,
+  description: `Awards, publications, and open-source contributions by ${person.name}`,
 };
 
 const gallery: Gallery = {

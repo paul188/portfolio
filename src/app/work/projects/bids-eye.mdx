@@ -20,7 +20,7 @@ website: "https://www.bidseye.xyz"
 link: "https://github.com/paul188/BIDS-Eye"
 ---
 
-<p className="paper-caption"><strong>Figure 1.</strong> The query pipeline. Stages 1 and 3 call a language model. Every other stage is deterministic code. Parts marked † run on the development branch and are not deployed yet.</p>
+<p className="paper-caption"><strong>Figure 1.</strong> One question traced through the query pipeline, with what each stage produces. The plan and codes are illustrative; the SQL is shortened compiler output.</p>
 
 ## Abstract
 
@@ -56,40 +56,13 @@ The difficulty is that <InlineMath math="c_i(d)" /> is often unknown. Only 231 o
 
 **Design rule.** At query time the model decides structure and code decides values. The single-prompt version failed mostly through the model's free choices. It turned the asker's wish words into required text (`standard & manner`), searched README text for a fact the catalogue stores in a column, and once joined 75,724 participants against 2.7 million files. Each stage in Figure 1 removes one of those freedoms.
 
-**Stage 1: intent parsing.** The model returns a typed plan, a Pydantic object. It names participant groups, scan requirements, filters and free-text topics, and it never picks a database value. An abridged plan for the question in the abstract:
-
-```json
-{
-  "groups": [
-    { "group_name": "patient_group", "diagnosis_terms": ["Alzheimer's disease"] },
-    { "group_name": "control_group", "diagnosis_terms": ["healthy"] }
-  ],
-  "group_operator": "AND",
-  "scan_requirements": [{ "scan_terms": ["EEG"], "required": true }]
-}
-```
-
-The plan keeps distinctions that a keyword list loses. "Patients and controls" is two groups that must both be present. "Bipolar disorder, schizophrenia or ADHD" is one group in which any diagnosis suffices.
+**Stage 1: intent parsing.** The model returns a typed plan, a Pydantic object. It names participant groups, scan requirements, filters and free-text topics, and it never picks a database value. The plan keeps distinctions that a keyword list loses. "Patients and controls" is two groups that must both be present. "Bipolar disorder, schizophrenia or ADHD" is one group in which any diagnosis suffices.
 
 **Stage 2: vocabulary resolution.** Each term is linked to the codes the database stores, through a cascade: exact match on labels and synonyms, fuzzy match (RapidFuzz WRatio ≥ 80), then biomedical embeddings (BioLORD-2023-C at cosine ≥ 0.75, SapBERT at ≥ 0.65). A term without a match is searched as text, and the plan records the miss. The vocabulary holds 1,459 concepts with 25,298 synonyms and can be browsed as an [interactive graph](/bids-eye-knowledge-graph.html). The benchmarks changed two decisions here. An ambiguous term now resolves to all of its readings, because picking one by synonym weight cost recall. Institution names are matched on normalised word tokens, because an embedding places "University of Washington" next to "Washington University".
 
 **Stage 3: SQL construction.** When a plan consists of participant groups and plain scan requirements, a compiler† writes the SQL and no second model call happens. The compiler is a whitelist: every plan field it does not know must be empty, otherwise the question goes to the model. It handles 18 of the 70 real requests with identical results, and generation takes 2.4 to 4 seconds, down from 4 to 21. All other questions go to the model with the resolved codes, a schema built at startup from what the database actually contains, and worked examples chosen by similarity from a pool of 319. The model never writes a text predicate. It copies a placeholder such as `text_match('epilepsy | epileptic | seizure', 'short')`, and code expands it.
 
-**Stage 4: rewriting.** A rewriter parses the SQL with sqlglot and applies fixed rules. The most consequential rule is the text fallback. Because so few datasets carry a diagnosis code, every coded filter becomes "the code, or these words in the dataset's short fields":
-
-```sql
--- shortened: the full query adds paper text and the evidence tiers
-SELECT d.id, d.name, COUNT(DISTINCT o.subject) AS subject_count
-FROM bids_datasets d
-LEFT JOIN bids_objects o ON o.dataset_id = d.id AND o.subject IS NOT NULL
-WHERE EXISTS (SELECT 1 FROM bids_objects o2
-              WHERE o2.dataset_id = d.id
-                AND (o2.datatype = 'electroencephalography' OR o2.suffix = 'eeg'))
-  AND (EXISTS (SELECT 1 FROM bids_participants p2
-               WHERE p2.dataset_id = d.id AND p2.diagnosis IN ('alzheimers_disease'))
-       OR d.search_tsv @@ to_tsquery('english', 'alzheimer:AB | alzheimers:AB'))
-GROUP BY d.id;
-```
+**Stage 4: rewriting.** A rewriter parses the SQL with sqlglot and applies fixed rules. The most consequential rule is the text fallback. Because so few datasets carry a diagnosis code, every coded filter becomes "the code, or these words in the dataset's short fields", which is the `OR text_match(…)` branch in Figure 1.
 
 **Stage 6: query guard†.** On 14 November 2026 a generated query joined every participant with every file of each dataset, and the sort filled the server's disk. Each query now passes four independent checks: a static analysis of the parsed SQL (one plain SELECT, every join conditioned, participants and files never joined at the same level), an `EXPLAIN` row estimate, per-transaction limits on time and memory, and a concurrency cap. When the database or the guard rejects a query, the model receives the error once and the response is flagged as self-corrected.
 

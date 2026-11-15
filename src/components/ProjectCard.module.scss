@@ -70,9 +70,15 @@ h3.title {
         font-weight: 500;
         color: var(--cat);
     }
+
+    // The category picked in the filter: filled, like the selected filter tag.
+    li[data-category][data-active="true"] {
+        background: var(--cat);
+        color: #fff;
+    }
 }
 
-// Topics: a second, smaller row of grey tags under the category tags, so the
+// Topics: a second, smaller row of black-on-white tags under the category tags, so the
 // two kinds of label don't read as the same thing.
 .topics {
     display: flex;
@@ -84,12 +90,12 @@ h3.title {
 
     li {
         padding: 0.125rem 0.5rem;
-        border: 1px solid var(--neutral-border-weak);
+        border: 1px solid var(--neutral-on-background-medium);
         border-radius: 0.25rem;
         font-family: var(--font-label);
-        font-size: 0.75rem;
+        font-size: 0.8125rem;
         line-height: 1.4;
-        color: var(--neutral-on-background-weak);
+        color: var(--neutral-on-background-strong);
     }
 }
 

@@ -14,6 +14,8 @@ interface ProjectCardProps {
   tags?: string[];
   categories?: string[];
   website?: string;
+  /** Category picked in the filter above the list; its tag is shown filled */
+  activeCategory?: string;
 }
 
 export const ProjectCard: React.FC<ProjectCardProps> = ({
@@ -27,6 +29,7 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
   tags = [],
   categories = [],
   website = "",
+  activeCategory,
 }) => {
   const image = images[0];
   const topics = tags.filter((label) => !categories.includes(label));
@@ -41,7 +44,11 @@ export const ProjectCard: React.FC<ProjectCardProps> = ({
         {categories.length > 0 && (
           <ul className={styles.tags} aria-label="Fields">
             {categories.map((label) => (
-              <li key={`category-${label}`} data-category={CATEGORY_KEYS[label]}>
+              <li
+                key={`category-${label}`}
+                data-category={CATEGORY_KEYS[label]}
+                data-active={label === activeCategory ? "true" : undefined}
+              >
                 {label}
               </li>
             ))}

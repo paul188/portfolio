@@ -79,6 +79,7 @@ export function ProjectsBrowser({
                 hasCaseStudy={card.hasCaseStudy}
                 link={card.link}
                 website={card.website}
+                activeCategory={selected === ALL ? undefined : selected}
                 tags={card.tags}
                 categories={CATEGORY_ORDER.filter((cat) => card.categories?.includes(cat))}
               />

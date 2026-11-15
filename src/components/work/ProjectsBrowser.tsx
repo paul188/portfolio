@@ -19,7 +19,7 @@ export interface ProjectCardData {
 }
 
 // Fixed display order for the high-level category filter
-const CATEGORY_ORDER = ["Software", "Cybersecurity", "Math", "Medicine"];
+const CATEGORY_ORDER = ["AI", "Medicine", "Cybersecurity", "Math"];
 
 const ALL = "all";
 

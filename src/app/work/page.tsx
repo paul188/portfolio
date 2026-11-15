@@ -30,7 +30,7 @@ export default function Work() {
       />
       <h1 className="page-title">Projects</h1>
       <p className="page-lede" style={{ marginBottom: "2rem" }}>
-        Research and engineering work in software, security, mathematics and medicine.
+        Research and engineering work in AI, medicine, security and mathematics.
       </p>
       <Projects filterable featured="neurodare" />
     </Column>

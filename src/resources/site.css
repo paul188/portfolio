@@ -9,8 +9,8 @@
 
   /* Category colours: text colour and a light tint of it. Used by the
      project filter tabs and the topic tags on project cards. */
-  --cat-software: #0e7490;
-  --cat-software-tint: #e8f6f9;
+  --cat-ai: #0e7490;
+  --cat-ai-tint: #e8f6f9;
   --cat-cybersecurity: #b42318;
   --cat-cybersecurity-tint: #fdeeec;
   --cat-math: #6d28d9;
@@ -19,7 +19,7 @@
   --cat-medicine-tint: #e9f6ee;
 }
 
-[data-category="software"] { --cat: var(--cat-software); --cat-tint: var(--cat-software-tint); }
+[data-category="ai"] { --cat: var(--cat-ai); --cat-tint: var(--cat-ai-tint); }
 [data-category="cybersecurity"] { --cat: var(--cat-cybersecurity); --cat-tint: var(--cat-cybersecurity-tint); }
 [data-category="math"] { --cat: var(--cat-math); --cat-tint: var(--cat-math-tint); }
 [data-category="medicine"] { --cat: var(--cat-medicine); --cat-tint: var(--cat-medicine-tint); }

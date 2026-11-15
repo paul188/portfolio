@@ -1,0 +1,92 @@
+% BIDS-Eye project page, Figure 1: the query pipeline. State of 2026-11-15.
+% Build:  ./build-paper-figures.sh   (pdflatex + pdftoppm, writes public/images/projects/)
+\documentclass[tikz,border=8pt]{standalone}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{textcomp}
+\usetikzlibrary{arrows.meta,positioning,calc,backgrounds,shapes.geometric}
+
+\definecolor{ink}{HTML}{1B1F24}
+\definecolor{mute}{HTML}{59616B}
+\definecolor{rule}{HTML}{7C848E}
+\definecolor{codF}{HTML}{EEF3FA} \definecolor{codB}{HTML}{2B5C9E}
+\definecolor{llmF}{HTML}{F1EDFB} \definecolor{llmB}{HTML}{5B45C0}
+\definecolor{datF}{HTML}{FBF3DF} \definecolor{datB}{HTML}{9A6A08}
+
+\newcommand{\ttl}[1]{{\bfseries #1}}
+\newcommand{\sub}[1]{{\footnotesize\color{mute}#1}}
+\newcommand{\num}[1]{{\bfseries\color{mute}#1}}
+
+\begin{document}
+\hyphenpenalty=10000 \exhyphenpenalty=10000
+\begin{tikzpicture}[
+  font=\small\color{ink},
+  >={Stealth[length=5pt,width=4.2pt]},
+  show background rectangle, background rectangle/.style={fill=white},
+  stage/.style={draw=#1B, fill=#1F, line width=0.6pt, rounded corners=2pt, align=center,
+                text width=2.12cm, inner xsep=4pt, inner ysep=6pt, minimum height=3.1cm},
+  stage/.default=cod,
+  res/.style={draw=#1B, fill=#1F, line width=0.6pt, rounded corners=2pt, align=center,
+              inner xsep=7pt, inner ysep=6pt, minimum height=1.15cm},
+  dev/.style={dash pattern=on 3pt off 2pt},
+  flow/.style={->, draw=ink, line width=0.7pt},
+  aux/.style={->, draw=rule, line width=0.55pt},
+  lbl/.style={font=\footnotesize\itshape\color{mute}, inner sep=2pt, align=center},
+]
+
+% ── Six stages ──────────────────────────────────────────────────────────────
+\node[stage=llm] (s1) at (0,0)
+  {\num{1}\\[1pt]\ttl{Intent parser}\\[3pt]\sub{model reads the question into a typed plan}};
+\node[stage] (s2) at (2.72,0)
+  {\num{2}\\[1pt]\ttl{Vocabulary resolver}\\[3pt]\sub{exact, fuzzy, embedding match}};
+\node[stage=llm] (s3) at (5.44,0)
+  {\num{3}\\[1pt]\ttl{SQL construction}\\[3pt]\sub{compiler\textsuperscript{\textdagger} or model with examples}};
+\node[stage] (s4) at (8.16,0)
+  {\num{4}\\[1pt]\ttl{SQL rewriter}\\[3pt]\sub{fixed rules, text fallback}};
+\node[stage] (s5) at (10.88,0)
+  {\num{5}\\[1pt]\ttl{Evidence tiers}\\[3pt]\sub{grades fields that are not recorded}};
+\node[stage, dev] (s6) at (13.6,0)
+  {\num{6}\\[1pt]\ttl{Query guard}\textsuperscript{\textdagger}\\[3pt]\sub{static checks, plan estimate, limits}};
+\foreach \a/\b in {1/2,2/3,3/4,4/5,5/6} \draw[flow] (s\a) -- (s\b);
+
+% ── Top row: input, curated knowledge, output ───────────────────────────────
+\node[lbl, anchor=south] (q) at ($(s1.north)+(0,1.42)$) {question};
+\draw[flow] (q.south) -- (s1.north);
+
+\node[res=dat, text width=4.4cm] (kb) at ($(s2.north)!0.5!(s3.north)+(0,1.75)$)
+  {\ttl{Curated knowledge}\\[1pt]\sub{1,459 concepts, 25,298 synonyms, 319 worked SQL examples}};
+\draw[aux] (kb.south -| s2.north) -- (s2.north);
+\draw[aux] ([xshift=-5mm]kb.south -| s3.north) -- ([xshift=-5mm]s3.north);
+
+\node[lbl, anchor=south] (out) at ($(s6.north)+(5mm,1.42)$) {ranked results};
+\draw[flow] ([xshift=5mm]s6.north) -- (out.south);
+
+% Self-correction loop
+\draw[aux, rounded corners=3pt]
+  ([xshift=-5mm]s6.north) -- ++(0,0.62) -| ([xshift=5mm]s3.north);
+\node[lbl, fill=white] at ($(s4.north)!0.5!(s5.north)+(0,0.62)$)
+  {rejected query: one self-correction};
+
+% ── Bottom row: model cascade, catalogue ────────────────────────────────────
+\node[res=llm, text width=5.6cm] (llm) at ($(s1.south)!0.5!(s3.south)+(0,-1.55)$)
+  {\ttl{Language models}\\[1pt]\sub{Gemini cascade under a time budget, Claude as fallback}};
+\draw[aux] (llm.north -| s1.south) -- (s1.south);
+\draw[aux] (llm.north -| s3.south) -- (s3.south);
+
+\node[res=dat, text width=6.6cm] (db) at ($(s5.south)!0.5!(s6.south)+(-1.0,-1.55)$)
+  {\ttl{Catalogue in PostgreSQL}\\[1pt]\sub{1,721 datasets, 2.7\,M files, 75,724 participants, 1,509 papers}};
+\draw[flow, <->] (s6.south) -- node[lbl, right, pos=0.45] {SELECT} (s6.south |- db.north);
+
+% ── Legend ──────────────────────────────────────────────────────────────────
+\begin{scope}[shift={($(llm.south west)+(0.12,-0.72)$)}]
+  \foreach \c/\n/\x in {llm/calls a language model/0, cod/deterministic code/4.3, dat/data/7.8} {
+    \node[draw=\c B, fill=\c F, line width=0.55pt, rounded corners=1pt,
+          minimum width=9pt, minimum height=7pt, inner sep=0pt] (l) at (\x,0) {};
+    \node[font=\footnotesize\color{mute}, anchor=west, inner sep=3pt] at (l.east) {\n};
+  }
+  \node[font=\footnotesize\color{mute}, anchor=west, inner sep=0pt] at (9.6,0)
+    {\textsuperscript{\textdagger}\,development branch, not yet deployed};
+\end{scope}
+
+\end{tikzpicture}
+\end{document}

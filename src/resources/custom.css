@@ -241,3 +241,100 @@
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+
+/* ─── Paper-style case study (BIDS-Eye): abstract, numbered figures and
+       tables with captions, rules above and below tables as in LaTeX booktabs. ─── */
+
+.paper-abstract {
+  margin: 0.5rem 0 1.5rem;
+  padding: 0 1.75rem;
+  border-left: 2px solid var(--neutral-on-background-strong);
+}
+
+.paper-abstract p {
+  margin: 0 0 0.75rem;
+  font-size: 1rem;
+  line-height: 1.65;
+}
+
+.paper-abstract p:last-child {
+  margin-bottom: 0;
+}
+
+.paper-figure {
+  margin: 1.75rem 0 2rem;
+}
+
+.paper-figure img {
+  border: 1px solid var(--neutral-alpha-weak);
+  border-radius: 0.5rem !important;
+  background: #fff;
+}
+
+.prose p.paper-caption,
+.prose .paper-table caption {
+  margin: 0.75rem 0 0;
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--neutral-on-background-medium);
+  text-align: left;
+}
+
+.prose .paper-table caption {
+  caption-side: top;
+  margin: 0 0 0.6rem;
+}
+
+.prose table.paper-table {
+  display: table;
+  width: 100%;
+  margin: 1.75rem 0 2rem;
+  border-collapse: collapse;
+  border-top: 2px solid var(--neutral-on-background-strong);
+  border-bottom: 2px solid var(--neutral-on-background-strong);
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.paper-table th {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  border-bottom: 1px solid var(--neutral-on-background-strong);
+  font-weight: 600;
+  text-align: left;
+  vertical-align: bottom;
+}
+
+.paper-table td {
+  padding: 0.5rem 0.75rem 0.5rem 0;
+  vertical-align: top;
+  color: var(--neutral-on-background-strong);
+}
+
+.paper-table :is(th, td):last-child {
+  padding-right: 0;
+}
+
+.paper-table .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.prose p.paper-note {
+  margin-top: 2.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--neutral-alpha-medium);
+  font-size: 0.9375rem;
+  line-height: 1.55;
+  color: var(--neutral-on-background-medium);
+}
+
+@media (max-width: 640px) {
+  .paper-abstract {
+    padding: 0 0 0 1rem;
+  }
+  .prose table.paper-table {
+    display: block;
+    overflow-x: auto;
+  }
+}

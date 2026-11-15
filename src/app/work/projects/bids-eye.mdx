@@ -1,12 +1,13 @@
 ---
-title: "BIDS-Eye: Neuroimaging Dataset Search Engine"
-publishedAt: "2025-06-01"
-summary: "A search engine that answers plain-language questions over the OpenNeuro neuroimaging repository by converting them into SQL."
-images: []
+title: "BIDS-Eye: Plain-Language Search over Open Brain-Imaging Datasets"
+publishedAt: "2026-11-15"
+summary: "A text-to-SQL search engine over 1,721 OpenNeuro datasets. A language model reads the question into a typed plan, deterministic code builds the query, and every change is scored against judged answers."
+images:
+  - "/images/projects/bids-eye-pipeline.png"
 tags:
   - "LLM"
-  - "RAG"
-  - "semistructured data"
+  - "Text-to-SQL"
+  - "Retrieval Evaluation"
 categories:
   - "Software"
   - "Medicine"
@@ -15,364 +16,159 @@ team:
     role: "Software Engineer"
     avatar: "/images/avatar.jpg"
     linkedIn: "https://github.com/paul188"
+website: "https://www.bidseye.xyz"
 link: "https://github.com/paul188/BIDS-Eye"
 ---
 
-## Overview
+<p className="paper-caption"><strong>Figure 1.</strong> The query pipeline. Stages 1 and 3 call a language model. Every other stage is deterministic code. Parts marked † run on the development branch and are not deployed yet.</p>
 
-<style>{`
-  .bidseye-cta {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 12px;
-    padding: 20px 24px;
-    margin: 4px 0 24px;
-    background: linear-gradient(135deg, rgba(78,121,167,0.12) 0%, rgba(6,182,212,0.10) 100%);
-    border: 1px solid rgba(78,121,167,0.30);
-    border-radius: 14px;
-  }
-  .bidseye-link {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 13px 26px;
-    background: linear-gradient(135deg, #4e79a7 0%, #06b6d4 100%);
-    color: #fff;
-    border-radius: 10px;
-    font-weight: 700;
-    font-size: 15px;
-    text-decoration: none;
-    letter-spacing: 0.01em;
-    box-shadow: 0 4px 18px rgba(78,121,167,0.45);
-    transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease;
-  }
-  .bidseye-link:hover {
-    transform: translateY(-2px) scale(1.03);
-    box-shadow: 0 8px 28px rgba(78,121,167,0.65);
-    filter: brightness(1.08);
-  }
-  .bidseye-link:active {
-    transform: translateY(0) scale(0.98);
-  }
-  .bidseye-link-arrow {
-    font-size: 17px;
-    transition: transform 0.18s ease;
-    display: inline-block;
-  }
-  .bidseye-link:hover .bidseye-link-arrow {
-    transform: translate(3px, -3px);
-  }
-  .bidseye-note {
-    font-size: 13px;
-    color: var(--neutral-on-background-weak);
-    line-height: 1.6;
-    margin: 0;
-  }
-  .bidseye-note a {
-    color: #4e79a7;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-`}</style>
+## Abstract
 
-<div className="bidseye-cta">
-  <a href="https://www.bidseye.xyz" target="_blank" className="bidseye-link">
-    Try BIDS-Eye
-    <span className="bidseye-link-arrow">↗</span>
-  </a>
-  <p className="bidseye-note">
-    Sign up / sign in with your GitHub account to start using it — registration is open. Authentication is required to prevent token abuse from the underlying LLM API.
-  </p>
+<div className="paper-abstract">
+<p>BIDS-Eye answers questions such as <em>"EEG data of people with Alzheimer's disease and of healthy people in the same dataset"</em> over <a href="https://openneuro.org">OpenNeuro</a>, the main public repository for brain-imaging research data. It indexes the metadata of 1,721 datasets (2.7 million files, 75,724 participants, 1,509 linked papers) into PostgreSQL and translates each question into SQL.</p>
+<p>The first version let one language model write the whole query. The current version restricts the model to reading the question into a typed plan. Deterministic code resolves the terms, builds and repairs the SQL, and decides what to do when a dataset does not record the field a filter asks about. Every change is scored against judged answers. On 56 held-out questions, grading missing fields as evidence raised recall from 35% to 50% and lowered precision from 74% to 63%. On 65 real requests collected from forums and papers, the deployed search returns 50% of the correct datasets and the development branch 61%. A plain BM25 ranking still beats the pipeline on one benchmark, and Section 5 explains why.</p>
+<p>Live at <a href="https://www.bidseye.xyz">bidseye.xyz</a>: GitHub sign-in, 20 searches a day per account.</p>
 </div>
 
-BIDS-Eye is a natural-language search engine over **OpenNeuro**, the primary open-access repository for human neuroimaging data (MRI, fMRI, EEG, MEG, PET). It answers queries like *"datasets with ≥ 50 left-handed participants who did an n-back task with fMRI"* by crawling ~1,000 datasets from AWS S3, indexing them into a unified PostgreSQL database, and translating free-text queries into SQL through a three-tier RAG pipeline backed by a 1,466-concept biomedical ontology.
+## 1. Problem
 
-<style>{`
-  .be-stats {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 1px;
-    background: var(--neutral-border-weak);
-    border: 1px solid var(--neutral-border-weak);
-    border-radius: 12px;
-    overflow: hidden;
-    margin: 24px 0;
-  }
-  @media (max-width: 640px) {
-    .be-stats { grid-template-columns: repeat(2, 1fr); }
-  }
-  .be-stat {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px 16px;
-    background: var(--neutral-background-weak);
-    gap: 4px;
-    text-align: center;
-  }
-  .be-stat-num {
-    font-size: 28px;
-    font-weight: 700;
-    color: var(--neutral-on-background-strong);
-    letter-spacing: -0.02em;
-    line-height: 1;
-  }
-  .be-stat-label {
-    font-size: 11px;
-    color: var(--neutral-on-background-weak);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
-    font-weight: 500;
-  }
-`}</style>
+Every OpenNeuro dataset follows BIDS, the Brain Imaging Data Structure, a community standard for file names and metadata files. The layout is uniform and the content is uneven. A researcher's question usually combines criteria whose answers live in different places.
 
-<div className="be-stats">
-  <div className="be-stat">
-    <span className="be-stat-num">1,722</span>
-    <span className="be-stat-label">Datasets</span>
-  </div>
-  <div className="be-stat">
-    <span className="be-stat-num">2.7M</span>
-    <span className="be-stat-label">Objects</span>
-  </div>
-  <div className="be-stat">
-    <span className="be-stat-num">75,728</span>
-    <span className="be-stat-label">Participants</span>
-  </div>
-  <div className="be-stat">
-    <span className="be-stat-num">1,466</span>
-    <span className="be-stat-label">Ontology concepts</span>
-  </div>
-</div>
-
----
-
-## 1. Data Source: OpenNeuro and BIDS
-
-OpenNeuro hosts thousands of neuroimaging datasets on AWS S3, most of them publicly accessible. Every dataset follows the Brain Imaging Data Structure (BIDS), a community standard for how a dataset is organised on disk. File paths and JSON sidecars carry the metadata:
-
-```
-ds000228/
-├── dataset_description.json      ← name, authors, license, BIDS version
-├── participants.tsv               ← one row per subject: age, sex, handedness, diagnosis
-├── sub-001/
-│   ├── anat/
-│   │   └── sub-001_T1w.nii.gz
-│   └── func/
-│       ├── sub-001_task-rest_bold.nii.gz
-│       └── sub-001_task-rest_bold.json   ← sidecar: TR, slice timing, etc.
-└── derivatives/
-    └── fmriprep/sub-001/...
-```
-
-Because every dataset follows the same conventions, one SQL database can cover thousands of datasets without bespoke parsing.
-
----
-
-## 2. Database Schema
-
-pybids (the reference Python BIDS library) builds an in-process SQLite index of one dataset at a time. BIDS-Eye generalises this to a persistent PostgreSQL database spanning thousands of datasets.
-
-1. **Hot entities get real columns.** The most commonly filtered properties (`subject`, `session`, `task`, `suffix`, `datatype`, `sex`, `handedness`, `diagnosis`) are indexed columns.
-2. **Cold entities go into JSONB overflow.** ~30 secondary BIDS entities and arbitrary sidecar metadata land in `other_entities` (JSONB with GIN index), queryable without schema migrations.
-3. **Upserts are idempotent.** Every write uses `ON CONFLICT … DO UPDATE`, so re-crawling a dataset refreshes rows and never duplicates them.
-
-Four tables hold the data: `bids_datasets` (one row per dataset, raw or derivative), `bids_objects` (one row per file), `bids_participants` (one row per subject per dataset) and `object_associations` (directed edges between files, such as an image and its JSON sidecar).
-
----
-
-## 3. Crawlers
-
-Cloning all raw imaging files (`.nii.gz`) would require terabytes. BIDS-Eye uses **ghost indexing**:
-
-1. An anonymous boto3 client lists the `openneuro.org` S3 bucket.
-2. Metadata files (`.json`, `.tsv`) are downloaded in full. JSON files are repaired for common authoring mistakes such as trailing commas.
-3. Imaging files are created as empty stubs. 0 bytes is enough for pybids to see them in the tree.
-4. pybids indexes the local mirror, and BIDS-Eye upserts that index into PostgreSQL with all objects marked `is_remote=True`.
-
-Some datasets are access-restricted on S3. A fallback crawler queries the OpenNeuro GraphQL API and synthesises participant and object rows, marked as synthetic through `source_type`. APScheduler runs a crawl cycle on a configurable interval (default: 1 hour), one dataset at a time.
-
----
-
-## 4. Vocabulary Normalisation
-
-Raw BIDS datasets are terminologically inconsistent. The same diagnosis appears as `"MDD"`, `"major depressive disorder"`, `"clinical depression"`, `"depression"`, and `"296.20"` across different datasets. Without normalisation, no cross-dataset query is possible.
-
-`value_mappings.yaml` is the unified ontology that maps all surface forms onto canonical codes: **1,466 concepts across 8 categories**.
-
-
-```yaml
-diagnosis:
-  major_depressive_disorder:
-    label: "major depressive disorder"
-    standard_code: "major_depressive_disorder"
-    broader: [mood_disorders]
-    synonyms:
-      - term: "MDD"
-        weight: 0.85
-      - term: "296.20"        # ICD-9 code as synonym
-        weight: 0.6
-    codes: [mdd, depression, depressive_disorder]
-```
-
-A concept can have multiple parents via `broader`. Each synonym carries a weight:
-
-
-<table style={{width:'100%',borderCollapse:'collapse',margin:'1rem 0',fontSize:'0.85rem'}}>
-  <thead><tr style={{borderBottom:'2px solid var(--neutral-border-medium)'}}>
-    <th style={{padding:'6px 10px',textAlign:'left'}}>Weight</th>
-    <th style={{padding:'6px 10px',textAlign:'left'}}>Meaning</th>
-    <th style={{padding:'6px 10px',textAlign:'left'}}>Example</th>
-  </tr></thead>
+<table className="paper-table">
+  <caption><strong>Table 1.</strong> Three criteria from real requests and where a dataset answers them.</caption>
+  <thead><tr><th>Criterion</th><th>Where the answer lives</th></tr></thead>
   <tbody>
-    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>1.0</td><td style={{padding:'6px 10px'}}>Fully canonical</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'major depressive disorder'</td></tr>
-    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.85–0.99</td><td style={{padding:'6px 10px'}}>Robust abbreviation</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'MDD', 'major depression'</td></tr>
-    <tr style={{borderBottom:'1px solid var(--neutral-border-weak)'}}><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.5–0.84</td><td style={{padding:'6px 10px'}}>Domain-specific, usually correct</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'unipolar depression'</td></tr>
-    <tr><td style={{padding:'6px 10px',fontFamily:'monospace'}}>0.1–0.49</td><td style={{padding:'6px 10px'}}>Weak or ambiguous</td><td style={{padding:'6px 10px',fontFamily:'monospace',fontSize:'0.8rem',color:'var(--neutral-on-background-weak)'}}>'low mood', 'sadness'</td></tr>
+    <tr><td>"task fMRI with a repetition time below 1 second"</td><td>a scanner setting in a JSON file next to each scan</td></tr>
+    <tr><td>"at least 40 Parkinson's patients"</td><td>a count over the participant table, where one dataset writes <code>PD</code>, another <code>Parkinson</code>, and most write nothing</td></tr>
+    <tr><td>"videos of people talking"</td><td>a free-text README, or only the paper</td></tr>
   </tbody>
 </table>
 
-The retriever raises the fuzzy-match threshold for low-confidence synonyms:
+Read formally, a question is a conjunction of conditions, and the answer is the set of datasets that satisfy all of them:
 
-```python
-effective_threshold = 80 + (1.0 - weight) × 8
-```
+<BlockMath math="A(q) \;=\; \{\, d \;:\; c_1(d) \wedge c_2(d) \wedge \dots \wedge c_k(d) \,\}" />
 
-`"autism"` (weight 1.0) matches at score ≥ 80. `"developmental disorder"` (weight 0.3) requires score ≥ 85.6, so it only matches if the user typed it nearly verbatim.
+The difficulty is that <InlineMath math="c_i(d)" /> is often unknown. Only 231 of the 1,721 datasets record a coded diagnosis, and about half record no participant ages. SQL treats an unknown comparison as false, so a strict query drops every dataset that is silent on one field. Section 3 replaces that behaviour.
 
-### Synonym Generation and Collisions
+## 2. Pipeline
 
-Synonyms are mined from three corpus sources and validated by an LLM: dataset descriptions in PostgreSQL, the CrossRef REST API, and the OpenAlex REST API.
+**Indexing.** A crawler lists each dataset in OpenNeuro's public S3 bucket, downloads the small metadata files and creates every scan as an empty 0-byte file, which is enough for the reference BIDS parser to read the tree. A language model then reads each README once and extracts which conditions the study covers and in what role (patients, controls, excluded, mentioned). Every extracted claim carries a quote, and code verifies that the quote occurs in its source. This lets a diagnosis filter find "patients with bipolar disorder" without matching "bipolar electrodes".
 
-A collision is a synonym in concept A that is also the label or a high-weight (≥ 0.7) synonym of concept B. Detection uses RapidFuzz WRatio. The `task` field alone had **239 CRITICAL** and **1,075 HIGH** collisions, most commonly a parent concept claiming a child's label. A fix script applies 299 curated removals.
+**Design rule.** At query time the model decides structure and code decides values. The single-prompt version failed mostly through the model's free choices. It turned the asker's wish words into required text (`standard & manner`), searched README text for a fact the catalogue stores in a column, and once joined 75,724 participants against 2.7 million files. Each stage in Figure 1 removes one of those freedoms.
 
-### Knowledge Graph
-
-
-<style>{`
-  .kg-btn {
-    display: inline-flex;
-    align-items: center;
-    gap: 10px;
-    padding: 14px 28px;
-    background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 60%, #06b6d4 100%);
-    color: #fff;
-    border-radius: 12px;
-    font-weight: 600;
-    font-size: 15px;
-    text-decoration: none;
-    letter-spacing: 0.01em;
-    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.45);
-    transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease;
-    cursor: pointer;
-    border: none;
-  }
-  .kg-btn:hover {
-    transform: translateY(-3px) scale(1.03);
-    box-shadow: 0 10px 32px rgba(99, 102, 241, 0.65);
-    filter: brightness(1.08);
-  }
-  .kg-btn:active {
-    transform: translateY(0) scale(0.98);
-    box-shadow: 0 3px 12px rgba(99, 102, 241, 0.4);
-  }
-  .kg-btn-arrow {
-    font-size: 18px;
-    transition: transform 0.2s ease;
-    display: inline-block;
-  }
-  .kg-btn:hover .kg-btn-arrow {
-    transform: translate(3px, -3px);
-  }
-`}</style>
-
-<a href="/bids-eye-knowledge-graph.html" target="_blank" className="kg-btn">
-  Open Interactive Knowledge Graph
-  <span className="kg-btn-arrow">↗</span>
-</a>
-
-Shows all 1,474 concepts as circles clustered around 8 category hubs.
-
----
-
-## 5. Natural-Language Query to SQL
-
-Gemini handles high-level reasoning. A domain-specific RAG layer (`value_mappings.yaml` plus biomedical embeddings) resolves vocabulary. SQLCoder (fine-tuned Code Llama) was evaluated and abandoned: it requires a GPU inference endpoint and has no neuroscience vocabulary.
-
-Example query:
-
-> *"datasets with resting-state fMRI and at least 20 autistic participants"*
-
-### Stage 1: Entity Extraction
-
-Gemini 2.5 Flash returns a structured Pydantic object with the raw terms per field: `diagnosis=["autism"]`, `task=["resting state"]`, `datatype=["fMRI"]`.
-
-### Stage 2: Resolving Terms to Canonical Codes
-
-This stage resolves a surface form to a canonical database key, like the string `autism_spectrum_disorder` that goes straight into a SQL `WHERE` clause. It is closer to biomedical entity linking than to generative RAG.
-
-
-```
-User term
-    │
-    ▼
-Tier 1 — Exact match       O(1) dict lookup against leaf_db / group_db
-    │ miss
-    ▼
-Tier 2 — Fuzzy (WRatio)    weight-adjusted threshold: 80 + (1.0 − w) × 8
-    │ score < threshold
-    ▼
-Tier 3a — BioLORD-2023-C   cosine ≥ 0.75  (SNOMED-CT / MedDRA)
-    │ miss
-    ▼
-Tier 3b — SapBERT           cosine ≥ 0.65  (UMLS 4M+ entities)
-    │ miss
-    ▼
-VOCAB MISS → ILIKE hint injected into SQL
-```
-
-- **Embeddings.** BioLORD has very high precision for clinical terms with narrower coverage, so it runs first at the higher threshold. SapBERT has higher recall and catches the longer tail. Embeddings for all ~29 000 synonym surface forms are pre-computed, so only the user's term is embedded at query time.
-- **Multi-field search.** `"fMRI"` is both a `datatype` (`func/` folder) and a `suffix` (`bold`). The resolver searches `datatype`, `suffix`, and `task` in parallel and returns all hits.
-- **Hierarchy pruning.** If a result set contains both a concept and one of its ancestors, the ancestor is dropped. Otherwise the query would match far more data than the user intended.
-- **Vocabulary misses.** When all tiers fail and the LLM generates a `WHERE` filter with a made-up code, that filter is stripped and a prepared `ILIKE` is injected. The query falls back to approximate text search and avoids SQL errors or empty results.
-
-Resolved output:
+**Stage 1: intent parsing.** The model returns a typed plan, a Pydantic object. It names participant groups, scan requirements, filters and free-text topics, and it never picks a database value. An abridged plan for the question in the abstract:
 
 ```json
 {
-  "diagnosis": ["autism_spectrum_disorder"],
-  "task":      ["resting_state"],
-  "datatype":  ["func"],
-  "suffix":    ["bold"]
+  "groups": [
+    { "group_name": "patient_group", "diagnosis_terms": ["Alzheimer's disease"] },
+    { "group_name": "control_group", "diagnosis_terms": ["healthy"] }
+  ],
+  "group_operator": "AND",
+  "scan_requirements": [{ "scan_terms": ["EEG"], "required": true }]
 }
 ```
 
-### Stage 3: SQL Generation
+The plan keeps distinctions that a keyword list loses. "Patients and controls" is two groups that must both be present. "Bipolar disorder, schizophrenia or ADHD" is one group in which any diagnosis suffices.
 
-Resolved codes, the full schema DDL, and few-shot examples are assembled into a Gemini prompt.
+**Stage 2: vocabulary resolution.** Each term is linked to the codes the database stores, through a cascade: exact match on labels and synonyms, fuzzy match (RapidFuzz WRatio ≥ 80), then biomedical embeddings (BioLORD-2023-C at cosine ≥ 0.75, SapBERT at ≥ 0.65). A term without a match is searched as text, and the plan records the miss. The vocabulary holds 1,459 concepts with 25,298 synonyms and can be browsed as an [interactive graph](/bids-eye-knowledge-graph.html). The benchmarks changed two decisions here. An ambiguous term now resolves to all of its readings, because picking one by synonym weight cost recall. Institution names are matched on normalised word tokens, because an embedding places "University of Washington" next to "Washington University".
+
+**Stage 3: SQL construction.** When a plan consists of participant groups and plain scan requirements, a compiler† writes the SQL and no second model call happens. The compiler is a whitelist: every plan field it does not know must be empty, otherwise the question goes to the model. It handles 18 of the 70 real requests with identical results, and generation takes 2.4 to 4 seconds, down from 4 to 21. All other questions go to the model with the resolved codes, a schema built at startup from what the database actually contains, and worked examples chosen by similarity from a pool of 319. The model never writes a text predicate. It copies a placeholder such as `text_match('epilepsy | epileptic | seizure', 'short')`, and code expands it.
+
+**Stage 4: rewriting.** A rewriter parses the SQL with sqlglot and applies fixed rules. The most consequential rule is the text fallback. Because so few datasets carry a diagnosis code, every coded filter becomes "the code, or these words in the dataset's short fields":
 
 ```sql
-SELECT DISTINCT d.id, d.name, d.accession_id,
-       COUNT(DISTINCT p.participant_id) AS n_participants
+-- shortened: the full query adds paper text and the evidence tiers
+SELECT d.id, d.name, COUNT(DISTINCT o.subject) AS subject_count
 FROM bids_datasets d
-JOIN bids_participants p ON p.dataset_id = d.id
-JOIN bids_objects o ON o.dataset_id = d.id
-WHERE p.diagnosis = 'autism_spectrum_disorder'
-  AND o.task = 'resting_state'
-  AND (o.datatype = 'func' OR o.suffix = 'bold')
-GROUP BY d.id, d.name, d.accession_id
-HAVING COUNT(DISTINCT p.participant_id) >= 20
-ORDER BY n_participants DESC;
+LEFT JOIN bids_objects o ON o.dataset_id = d.id AND o.subject IS NOT NULL
+WHERE EXISTS (SELECT 1 FROM bids_objects o2
+              WHERE o2.dataset_id = d.id
+                AND (o2.datatype = 'electroencephalography' OR o2.suffix = 'eeg'))
+  AND (EXISTS (SELECT 1 FROM bids_participants p2
+               WHERE p2.dataset_id = d.id AND p2.diagnosis IN ('alzheimers_disease'))
+       OR d.search_tsv @@ to_tsquery('english', 'alzheimer:AB | alzheimers:AB'))
+GROUP BY d.id;
 ```
 
-### Stage 4: Execution and Error Correction
+**Stage 6: query guard†.** On 14 November 2026 a generated query joined every participant with every file of each dataset, and the sort filled the server's disk. Each query now passes four independent checks: a static analysis of the parsed SQL (one plain SELECT, every join conditioned, participants and files never joined at the same level), an `EXPLAIN` row estimate, per-transaction limits on time and memory, and a concurrency cap. When the database or the guard rejects a query, the model receives the error once and the response is flagged as self-corrected.
 
-If the SQL fails, the session is rolled back and Gemini receives the original question, the failed SQL, the schema DDL, and the PostgreSQL error message. The corrected SQL is executed once and the response is flagged `self_corrected: True`. If the correction also fails, the original error is returned.
+All model calls go through one client that walks a cascade (Gemini 2.5 Flash, Pro, Flash-Lite, then Claude) inside a time budget per question. If no model answers, the search degrades to a keyword search.
 
-**Regression testing:** 77 hand-crafted queries run after any pipeline change. They check minimum result count, required SQL fragments, and forbidden patterns (e.g. ILIKE on a canonical-code column).
+## 3. Evidence tiers
 
----
+A failure analysis on the first benchmark showed that most missed datasets failed a filter on a field they do not record. A strict `age <= 12` drops a dataset titled "MRI data of 3–12 year old children" that lists no ages.
 
-**Stack:** Python, PostgreSQL, FastAPI, pybids, boto3, RapidFuzz, BioLORD-2023-C, SapBERT, Gemini 2.5, Claude Sonnet, Docker Compose
+Stage 5 therefore grades each condition on each dataset with one of four states:
+
+<BlockMath math="s_i(d) \in \{\, \text{confirmed},\ \text{probable},\ \text{possible},\ \text{contradicted} \,\}" />
+
+A condition is *confirmed* when it holds on recorded data. It is *probable* when a weaker form holds: some of the search words match, the words occur only in a paper the dataset names, or the README names the asked group. It is *possible* when the field is missing and nothing hints either way, and *contradicted* when the recorded value does not fit. The search returns a dataset when every condition is at least probable and at most one falls short of confirmed:
+
+<BlockMath math="d \in R(q) \iff \forall i:\ s_i(d) \in \{\text{confirmed}, \text{probable}\} \;\;\wedge\;\; \bigl|\{\, i : s_i(d) = \text{probable} \,\}\bigr| \le 1" />
+
+<div className="paper-figure">
+  <ClickableImage src="/images/projects/bids-eye-tiers.png" alt="Evidence tiers on an example question: five datasets, the state of each condition, and whether the dataset is returned" />
+  <p className="paper-caption"><strong>Figure 2.</strong> Evidence tiers on one question (schematic datasets). A strict filter returns only the first row. The tiers also return the second and label it.</p>
+</div>
+
+Results are ordered by their weakest state, then by text rank. Second-tier results appear under their own heading, each with its reason ("ages not recorded; the description names the age group"). Facts read from the files themselves, such as scan type and subject counts, stay hard filters. Keeping *possible* datasets was measured and rejected: it added 2,211 result rows for 0.4 points of recall.
+
+## 4. Evaluation
+
+The prototype's regression test checked 77 queries for SQL fragments, which showed that a query ran and left open whether the right datasets came back. Three benchmarks with judged answers replaced it.
+
+<table className="paper-table">
+  <caption><strong>Table 2.</strong> Benchmarks. A question–dataset pair is one judgement of whether a dataset answers a question.</caption>
+  <thead><tr><th>Benchmark</th><th>Questions</th><th>Ground truth</th></tr></thead>
+  <tbody>
+    <tr><td>Written questions</td><td>227, of which 60 held out</td><td>pooled candidates, graded by a model judge against a written criterion</td></tr>
+    <tr><td>Real requests</td><td>70 from forums, GitHub issues and the methods sections of papers</td><td>13,795 pairs: 9,763 decided by recorded facts, 3,739 by a judge, 293 by stated presumption or review</td></tr>
+    <tr><td>Reuse papers</td><td>1,170 from 561 papers that reused a dataset</td><td>the dataset the authors used, so no judge is needed</td></tr>
+  </tbody>
+</table>
+
+Four choices keep the numbers trustworthy.
+
+- **Pooling.** Judging 1,721 datasets per question is infeasible. As in information-retrieval evaluations, every dataset that any generous signal points at (keywords, codes, ages, the 20 nearest by embedding) becomes a candidate, and only candidates are judged. A direct check of the assumption: of 37 datasets in the live top 20 that had not been candidates, 1 was relevant and 4 were partially relevant.
+- **Audited judges.** The judges are language models. A blind second judge re-read 383 "not relevant" labels and called 5 of them relevant (1.3%). Two independent reviewers re-labelled 150 items blind and agreed with the judge on relevant versus not in 94%. On the real requests, recorded facts and the judge disagreed in 7 cases, and the judge was right in all 7.
+- **Held-out discipline.** Writers who saw neither search code nor results wrote the 60 held-out questions after the others. I read held-out scores as averages only, once per finished change, and add no vocabulary, example or prompt text because of a held-out question.
+- **Record and replay.** A recorded run stores each question's plan, resolved codes and raw model SQL. A replay answers both model stages from that file, so a change to any deterministic stage is scored on all 70 requests without a model call, in 16 minutes instead of 34. Replayed results matched the original on 69 of 70 requests.
+
+## 5. Results
+
+<div className="paper-figure">
+  <ClickableImage src="/images/projects/bids-eye-results.png" alt="Recall and precision on three benchmarks, before and after each change to the search" />
+  <p className="paper-caption"><strong>Figure 3.</strong> Recall (share of the correct datasets returned) and precision (share of the returned datasets that are correct). (a) Four successive versions on the development questions. (b) One translation scored with the tiers off and on. (c) The 65 real requests that have an answer in the catalogue. The model re-ranker is off in all runs.</p>
+</div>
+
+On the development questions, recall rose from 32% to 59% in two days while precision fell from 68% to 59%. The held-out pair in panel (b) isolates the tiers and is the number to quote: 15 points of recall for 11 points of precision, with the lower-confidence results ranked last and labelled. On the real requests the development branch reaches 61% recall at about the same precision, and the requests with no correct result drop from 14–16 to 7–9. Repeated runs differ by one or two points. All 70 real requests have since served to find defects, so they are a development set and their scores overstate performance on unseen requests.
+
+**Where the search failed.** For the deployed run, I traced each failing request to the SQL condition that caused it. One read-only query per request evaluated every top-level condition on every dataset (186 conditions), which gives the number of correct answers each condition excludes on its own.
+
+<table className="paper-table">
+  <caption><strong>Table 3.</strong> Main causes among the 49 of 69 scored requests with recall or precision under 60%.</caption>
+  <thead><tr><th>Cause</th><th className="num">Requests</th></tr></thead>
+  <tbody>
+    <tr><td>A wish word of the asker became required README text ("standard", "sufficient sample size")</td><td className="num">9</td></tr>
+    <tr><td>A fact the catalogue records was searched in README text, or ignored</td><td className="num">9</td></tr>
+    <tr><td>A concept that only free text carries was required as one exact word combination</td><td className="num">7</td></tr>
+    <tr><td>A condition was built wrongly (values that do not exist, wrong logic)</td><td className="num">5</td></tr>
+    <tr><td>"Resting state" filtered nothing</td><td className="num">3</td></tr>
+    <tr><td>The task list for a concept was incomplete</td><td className="num">3</td></tr>
+  </tbody>
+</table>
+
+For "data organised in a standard manner", the condition `standard & manner` let 11 of 986 correct datasets through. Without it the search finds all 986. This table set the work that followed: the plan compiler, the handling of "or" lists, and a registry that fixes for each kind of filter which evidence decides it.
+
+**A baseline that still wins.** On a development subset of 292 reuse-paper questions, the deployed pipeline put the dataset the authors had used on the first page for 23% and returned nothing for 48%. A BM25 keyword ranking over name, study fields and README, with no language model, reaches 68% on the 830 development questions. The two question sets differ, yet the direction is clear. A long sentence of need turns into many strict filters, and one wrong filter empties the result, while BM25 always returns its best guess. The pipeline is therefore moving toward fewer hard conditions and more ranked evidence.
+
+## 6. Limits
+
+- The deployed search misses half of the correct answers to real requests, and about 40% of what it returns is not a correct answer.
+- Language models judged both benchmarks. The audits bound the error, and a person has not read every label.
+- The gold set covers 70 requests, all in English, and now serves as a development set. An unbiased number needs new requests.
+- The pipeline has not yet run on the 340 held-out reuse-paper questions.
+- 278 public OpenNeuro datasets are missing from the catalogue.
+
+<p className="paper-note">Catalogue counts were read from the production database on 15 November 2026, and benchmark scores were recomputed the same day from the stored run files in the repository. Stack: Python 3.12, FastAPI, PostgreSQL 16 (JSONB, full-text search), sqlglot, pybids, RapidFuzz, sentence-transformers, Pydantic, Gemini 2.5, Claude, Vue 3, Docker Compose, GitHub Actions.</p>
